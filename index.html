@@ -10,15 +10,25 @@
 <body>
 	<input type="file" class="d-none" accept=".mid,.midi" id="fileInput"/>
 	<h1 class="text-center display-4">Defi: MIDI Demake Tool for PICO-8</h1>
-  <input class="btn btn-info" type="button" value="Load Image File" id="loadButton">
-	<script src="https://unpkg.com/@tonejs/midi"></script>
+  <input class="btn btn-info" type="button" value="Load MIDI File" id="loadButton">
+	<script src="https://unpkg.com/@tonejs/midi@2.0.27/build/Midi.js"></script>
   <script>
 	var fileInput = document.getElementById("fileInput")
 	var loadButton=document.getElementById("loadButton")
-  fileInput.onchange = function (e)
+	fileInput.onchange = function (e)
 	{
-		const midi = await Midi.fromUrl("path/to/midi.mid")
-    console.log(midi)
+		if (e.target.files && e.target.files.item(0)) 
+		{
+			Midi.fromUrl( URL.createObjectURL(e.target.files[0])).then( midi=>
+				{
+					console.log(midi)
+				}	
+			)
+		}
+	}
+	loadButton.onclick=function()
+	{
+		fileInput.click()
 	}
 </script>	
 </body>
