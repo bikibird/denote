@@ -1,0 +1,64 @@
+PICO-8 speed = # of ticks per note.  1 tick = 1/120 seconds or 120 ticks per second
+
+MIDI ppq # of ticks per quarer note.  
+
+One beat is a quarter note, and a pulse is a tick, so with 100 BPM and 960 PPQ, you have 100 × 960 = 96000 ticks per minute. This is 96000 / 60 = 1600 ticks per second.
+So the time, in seconds, is 34560 / 1600 = 21.6 s; the duration is 1920 / 1600 = 1.2 s.
+
+if tempo is 78 bpm  ppq=256 ticks per quarter note and smallest note is 32 ticks, what speed in PICO-8?
+
+(60*120/tempo)*smallest note/ppq= pico speed
+
+(7200/78)*(32/256)=11.53 round up to 12
+
+numerator=7200*smallest ticks/ppq
+
+numerator/tempo
+
+speed=Math.floor((7200/ppq)*ticks/bpm)
+Calculate pulses per p8 note ppp8
+
+track[track.trackIndex].durationTicks
+-----------------------------------------------------------
+resolution
+
+
+There are 64 SFX ("sound effects") in a cartridge, used for both sound and music.
+	
+	Each SFX has 32 notes, and each note has:
+		A frequency   (C0..C5)
+		An instrument (0..7)
+		A volume      (0..7)
+		An effect     (0..7)
+	
+	Each SFX also has these properties:
+	
+		A play speed (SPD) : the number of 'ticks' to play each note for.
+			// This means that 1 is fastest, 3 is 3x as slow, etc.
+
+		Loop start and end : this is the note index to loop back and to
+			// Looping is turned off when the start index >= end index
+
+		When only the first of the 2 numbers is used (and the second one is 0),
+		it is taken to mean the number of notes to be played. This is normally
+		not needed for sound effects (you can just leave the remaining notes
+		empty), but is useful for controlling music playback.
+
+Each note is encoded in 16 bits, in Little Endian style, with the low 8 bits in the first byte, and the high 8 bits in the second, formatted like so:
+
+Second byte / High 8 bits	c	e	e	e	v	v	v	w   First byte / Low 8 bits	w	w	p	p	p	p	p	p 
+c: when c is 1, waveform is a custom instrument corresponding to sfx 0-7; otherwise it is one of the eight built-in waveforms (PICO-8 0.1.11+)
+eee: effect (0-7)
+vvv: volume (0-7)
+www: waveform (0-7)
+pppppp: pitch (0-63)
+
+Instruments: 
+0: 0		c0: 32768
+1: 4096		c1: 36864
+2: 8192		c2: 40960
+3: 12388	c3: 45156
+4: 16384	c4: 49152
+5: 20480	c5: 53248
+6: 24576	c6: 57344
+7: 28762	c7: 61530
