@@ -1,6 +1,10 @@
 function convert(midi,granularity=2)
 {
-	const dec2hex=(n)=>(0x10000+n).toString(16).substr(-4)
+	const formatNote=(n)=>
+	{
+		var note=(0x10000+n).toString(16).substr(-4)
+		return note.substr(2,2)+note.substr(0,2)
+	}	
 	const tracks=[]
 	var ppq=midi.header.ppq
 	var resolution=ppq/granularity
@@ -107,8 +111,7 @@ function convert(midi,granularity=2)
 				
 				for (let i = 0; i< note.beats; i++)
 				{
-					//sfx=sfx+dec2hex(note.pitch +pico8.volumes[note.volume])
-					sfx=sfx+dec2hex(note.pitch*256)
+					sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume])
 				}	
 				channel.sfx=sfx
 			})
