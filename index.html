@@ -78,21 +78,20 @@
 	<!--input type="file" class="d-none" accept=".mid,.midi" id="fileInput"/>
 	<h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1>
   <input class="btn btn-info" type="button" value="Load MIDI File" id="loadButton"-->
+	<h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1>
    <tone-content>
-	<div id="Description">
-		Parse a MIDI file into a Tone.js-friendly JSON format.
-	</div>
-	<div id="FileDrop">
-		<div id="Text">
-			Drop MIDI file here or click to choose file.
+		<div id="FileDrop">
+			<div id="Text">
+				Drop MIDI file here or click to choose file.
+			</div>
+			<input type="file" accept="audio/midi">
 		</div>
-		<input type="file" accept="audio/midi">
-	</div>
-	<div id="Results">
-		<textarea id="ResultsText" placeholder="json output..."></textarea>
-	</div>
-	<tone-play-toggle disabled=""></tone-play-toggle>
-</tone-content>		
+	</tone-content>		
+	<div class="denote-container">
+		
+	</div>	
+
+
 <script type="text/javascript" src="denote.js"></script>	
 
 	<script type="text/javascript">
@@ -136,83 +135,55 @@
 				});
 		}
 
-		var currentMidi = null;
+		var currentMidi = null
 
-		function parseFile(file) {
+		function parseFile(file)
+		{
 			//read the file
-			const reader = new FileReader();
-			reader.onload = function (e) {
-				const midi = new Midi(e.target.result);
-				document.querySelector(
-					"#ResultsText"
-				).value = JSON.stringify(midi, undefined, 2);
-				document
-					.querySelector("tone-play-toggle")
-					.removeAttribute("disabled");
-				currentMidi = midi;
-				console.log(convert(midi))
-			};
-			reader.readAsArrayBuffer(file);
+			const reader = new FileReader()
+			reader.onload = function (e)
+			{
+				const midi = new Midi(e.target.result)
+				currentMidi = convert(midi)
+				render(currentMidi)
+			}
+			reader.readAsArrayBuffer(file)
+		}
 
+		function render(midi)
+		{
+			const {sections,sfx}=midi.result
+			document.querySelector(".denote-container").innerHTML=
+			`${sections.reduce((s, section,index) => s+
+				`<div class="denote-section">
+					<div>Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  <input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
+         checked class="denote-section-include">
+  <label for="include_section${index+1}">Include</label></div>
+				</div>`
+			,"")}
+			${section.reduce((t, track,index) => t+
+			``,"")}
+			<p class="denote-sfx">${midi.result.sfx}</p>`
 			
 		}
-
-		const synths = [];
-		document
-			.querySelector("tone-play-toggle")
-			.addEventListener("play", (e) => {
-				const playing = e.detail;
-				if (playing && currentMidi) {
-					const now = Tone.now() + 0.5;
-					currentMidi.tracks.forEach((track) => {
-						//create a synth for each track
-						const synth = new Tone.PolySynth(Tone.Synth, {
-							envelope: {
-								attack: 0.02,
-								decay: 0.1,
-								sustain: 0.3,
-								release: 1,
-							},
-						}).toDestination();
-						synths.push(synth);
-						//schedule all of the events
-						track.notes.forEach((note) => {
-							synth.triggerAttackRelease(
-								note.name,
-								note.duration,
-								note.time + now,
-								note.velocity
-							);
-						});
-					});
-				} else {
-					//dispose the synth and make a new one
-					while (synths.length) {
-						const synth = synths.shift();
-						synth.disconnect();
-					}
-				}
-			});
-	</script>
-  <!--script>
-	var fileInput = document.getElementById("fileInput")
-	var loadButton=document.getElementById("loadButton")
-	fileInput.onchange = function (e)
-	{
-		if (e.target.files && e.target.files.item(0)) 
+		document.addEventListener('change', (e)=>onchange(e))
+		onchange=function(e)
 		{
-			Midi.fromUrl( URL.createObjectURL(e.target.files[0])).then( midi=>
+			if (e.target.matches(".denote-section-include, .denote-track-include"))
 			{
-				console.log(midi)
-					
-			})
+				var sections=[]
+				document.querySelectorAll(".denote-section").forEach(element=>
+				{
+					sections.push(element.querySelector(".denote-section-include").checked)
+				})
+				console.log(sections)
+				currentMidi=convert(currentMidi,{granularity:16,effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false, sections:sections})
+				document.querySelector(".denote-sfx").innerHTML=currentMidi.result.sfx
+				//event.stopPropagation()
+			}
+		
 		}
-	}
-	loadButton.onclick=function()
-	{
-		fileInput.click()
-	}
+	</script>
 
-</script-->	
 </body>
 </html>	
