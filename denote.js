@@ -1,28 +1,18 @@
-function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false})
+
+function analyze(midi,options={granularity:16})
 {
-	const formatNote=(n)=>
-	{
-		var note=(0x10000+n).toString(16).substr(-4)
-		return note.substr(2,2)+note.substr(0,2)
-	}
-	const formatByte=(n)=>(0x100+n).toString(16).substr(-2)
+
 	const tracks=[]
 	var ppq=midi.header.ppq
 	var resolution=ppq*4/options.granularity
 	var tempos=midi.header.tempos
-	var pico8 =
-	{
-		effects:{"None":0, "Slide":4096, "Vibrato":8192, "Drop":12388, "Fade In":16384, "Fade Out":20480, "Fast Arpeggio":24576, "Slow Arpeggio":28762},
-		volumes:[0, 512, 1024, 1536, 2048, 2560, 3072, 3584],
-		instruments:{"Triangle": 0, "Tilted Saw": 64, "Saw": 128, "Square": 192, "Pulse": 256, "Organ": 320, "Noise": 384, "Phaser" :448, "Custom 0": 32768, "Custom 1": 32832,"Custom 2": 32896,"Custom 3": 32960,"Custom 4": 33024,"Custom 5": 33088,"Custom 6": 33152,"Custom 7": 33216},
-	}
-	var sfxes=[]
-	var patterns=[]
 	midi.result=null
 	//Check for simultaneous notes and split into multiple tracks
 	midi.tracks.filter(track=>track.notes.length>0).forEach(track=>
 	{
 		var tempTracks=[[]]
+		tempTracks[0].instrument=[[track.instrument.family,track.instrument.name].join(": "),track.instrument.number].join(" - ")
+
 		var tempIndex=0
 		var lastNote
 		var rest
@@ -34,7 +24,11 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 				while(note.ticks===tempTracks[tempIndex][tempTracks[tempIndex]?.length-1]?.ticks)
 				{
 					tempIndex++
-					if(!tempTracks[tempIndex]){tempTracks[tempIndex]=[]}
+					if(!tempTracks[tempIndex])
+					{
+						tempTracks[tempIndex]=[]
+						tempTracks[tempIndex].instrument=[[track.instrument.family,track.instrument.name].join(": "),track.instrument.number].join(" - ")
+					}
 				}
 			}
 			if(tempTracks[tempIndex].length>0)
@@ -54,8 +48,11 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 			{
 				tempTracks[tempIndex].push({midi: 36, velocity: 0, noteOffVelocity: 0, ticks: nextTiming, durationTicks: rest})
 			}
-			tempTracks[tempIndex].push(note)
-			tempIndex=0	
+			if (note.durationTicks>0)
+			{
+				tempTracks[tempIndex].push(note)
+				tempIndex=0	
+			}	
 		})
 		tempTracks.forEach(track=>
 		{
@@ -75,10 +72,12 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 	{
 		tempo.channels=[[]]
 		var channelIndex=0
+		
 		speed=Math.floor((7200/ppq)*resolution/tempo.bpm +.5)
 		tempo.speed=speed
 		tracks.forEach(track=>
 		{
+			tempo.channels[channelIndex].instrument=track.instrument	
 			while (track.trackIndex<track.length && (!tempo.stop || track[track.trackIndex].ticks<tempo.stop))
 			{ 
 				
@@ -91,7 +90,7 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 						//speed:speed,
 						beats:Math.floor(track[track.trackIndex].durationTicks/resolution +.5),
 						volume:Math.floor(7*track[track.trackIndex].velocity+.5),
-						notes:[]
+						//notes:[]
 						//start:track[track.trackIndex].ticks
 					})
 				}	
@@ -99,13 +98,43 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 			}
 			channelIndex++
 			tempo.channels[channelIndex]=tempo.channels[channelIndex]?tempo.channels[channelIndex]:[]
+			tempo.channels[channelIndex].instrument=track.instrument
 		})
-		tempo.channels=tempo.channels.filter(channel=>channel.length>0)		
+		tempo.channels=tempo.channels.filter(channel=>channel.length>0 && !isEmptyChannel(channel))		
 	})
+	//tempos[0]?.channels[0]?.
 
-	tempos.forEach(tempo=>
+	midi.result={sections:tempos}
+	return midi
+
+}
+
+function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false})
+{
+	const formatNote=(n)=>
 	{
-		tempo.channels.forEach(channel=>
+		var note=(0x10000+n).toString(16).substr(-4)
+		return note.substr(2,2)+note.substr(0,2)
+	}
+	const formatByte=(n)=>(0x100+n).toString(16).substr(-2)
+	//const tracks=[]
+	//var ppq=midi.header.ppq
+	//var resolution=ppq*4/options.granularity
+	var tempos=midi.result.sections
+	var pico8 =
+	{
+		effects:{"None":0, "Slide":4096, "Vibrato":8192, "Drop":12388, "Fade In":16384, "Fade Out":20480, "Fast Arpeggio":24576, "Slow Arpeggio":28762},
+		volumes:[0, 512, 1024, 1536, 2048, 2560, 3072, 3584],
+		instruments:{"Triangle": 0, "Tilted Saw": 64, "Saw": 128, "Square": 192, "Pulse": 256, "Organ": 320, "Noise": 384, "Phaser" :448, "Custom 0": 32768, "Custom 1": 32832,"Custom 2": 32896,"Custom 3": 32960,"Custom 4": 33024,"Custom 5": 33088,"Custom 6": 33152,"Custom 7": 33216},
+	}
+	var sfxes=[]
+	var patterns=[]
+	//midi.result=null
+	//Check for simultaneous notes and split into multiple tracks
+	
+	tempos.forEach((tempo,tempoIndex)=>
+	{
+		tempo.channels.forEach((channel,channelIndex)=>
 		{
 			var sfx=""
 			channel.forEach(note=>
@@ -123,28 +152,30 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 	let i,step,sfx,remainder,sfxIndex
 	tempos.forEach((tempo,tempoIndex)=>
 	{
-		if (!options?.sections || options?.sections?.[tempoIndex])
+		if (options?.sections?.[tempoIndex].section)
 		{
-			tempo.channels.forEach((channel)=>
+			tempo.channels.forEach((channel,channelIndex)=>
 			{
-				i=0
-				while(i<channel.sfx.length && sfxes.length < 65)
+				if (!options?.sections ||options?.sections[tempoIndex].tracks[channelIndex])
 				{
-					remainder=channel.sfx.length-i
-					step=(remainder>128)?128:remainder
-					sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"0")+formatByte(options.filter)+formatByte(tempo.speed)
-					if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
-					else {sfx=sfx+"0000"}
-					if (sfx.slice(2,130)==="".padEnd(128,"0")){channel.music.push(64)}//mute channel
-					else
+					i=0
+					while(i<channel.sfx.length && sfxes.length < 65)
 					{
-						sfxIndex=sfxes.findIndex(s=>s.slice(2)===sfx.slice(2))
-						if (sfxIndex===-1){channel.music.push(sfxes.push(sfx)-1)}
-						else {channel.music.push(sfxIndex)}
+						remainder=channel.sfx.length-i
+						step=(remainder>128)?128:remainder
+						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"0")+formatByte(options.filter)+formatByte(tempo.speed)
+						if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
+						else {sfx=sfx+"0000"}
+						if (sfx.slice(2,130)==="".padEnd(128,"0")){channel.music.push(64)}//mute channel
+						else
+						{
+							sfxIndex=sfxes.findIndex(s=>s.slice(2)===sfx.slice(2))
+							if (sfxIndex===-1){channel.music.push(sfxes.push(sfx)-1)}
+							else {channel.music.push(sfxIndex)}
+						}
+						i=i+step
 					}
-					
-					i=i+step
-				}
+				}	
 			})
 			for (let i = 0; i < Math.max(...tempo.channels.map((channel=>channel.music.length))); i++)
 			{
@@ -175,6 +206,19 @@ function convert(midi,options={granularity:16,effect:"None",instrument:"Triangle
 	midi.result={sfx:result+"[/sfx]",sections:tempos}
 	return midi
 
+}
+function isEmptyChannel(channel)
+{
+	result=true
+	for (note of channel)
+	{
+		if (note.pitch > 0 && note.volume > 0 && note.beats > 0)
+		{
+			result = false
+			break
+		}
+	}
+	return result
 }
 
 

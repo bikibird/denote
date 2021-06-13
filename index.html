@@ -144,44 +144,83 @@
 			reader.onload = function (e)
 			{
 				const midi = new Midi(e.target.result)
-				currentMidi = convert(midi)
+				currentMidi = convert(analyze(midi))
 				render(currentMidi)
+				update()
 			}
 			reader.readAsArrayBuffer(file)
 		}
-
+	
 		function render(midi)
 		{
 			const {sections,sfx}=midi.result
 			document.querySelector(".denote-container").innerHTML=
 			`${sections.reduce((s, section,index) => s+
 				`<div class="denote-section">
-					<div>Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  <input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
-         checked class="denote-section-include">
-  <label for="include_section${index+1}">Include</label></div>
+					<div><input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
+         checked class="denote-section-include"> Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  
+  </div>
+  ${section.channels.reduce((t, track,trackIndex) => t+
+			`<div class="denote-track"><input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
+         checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} Effect: <select name="Effect" class="denote-effect">
+    <option value="0">None</option>
+    <option value="4096">Slide</option>
+    <option value="8192">Vibrato</option>
+    <option value="12388">Drop</option>
+    <option value="16384">Fade In</option>
+    <option value="20480">Fade Out</option>
+    <option value="24576">Fast Arpeggio</option>
+	<option value="28762">Slow Arpeggio</option>
+</select>
+ Instrument: <select name="Instrument" class="denote-instrument">
+    <option value="0">Triangle</option>
+    <option value="64">Tilted Saw</option>
+    <option value="128">Saw</option>
+    <option value="192">Square</option>
+    <option value="256">Pulse</option>
+    <option value="320">Organ</option>
+    <option value="384">Noise</option>
+	<option value="448">Phaser</option>
+	<option value="32768">Custom 0</option>
+    <option value="32832">Custom 1</option>
+    <option value="32896">Custom 2</option>
+    <option value="32960">Custom 3</option>
+    <option value="33024">Custom 4</option>
+    <option value="33088">Custom 5</option>
+    <option value="33152">Custom 6</option>
+	<option value="33216">Custom 7</option>
+</select>
+				</div>`,"")}
+				
 				</div>`
 			,"")}
-			${section.reduce((t, track,index) => t+
-			``,"")}
+			
 			<p class="denote-sfx">${midi.result.sfx}</p>`
 			
 		}
 		document.addEventListener('change', (e)=>onchange(e))
 		onchange=function(e)
 		{
-			if (e.target.matches(".denote-section-include, .denote-track-include"))
+			if (e.target.matches(".denote-section-include, .denote-track-include, .denote-instrument, .denote-effect"))
 			{
-				var sections=[]
-				document.querySelectorAll(".denote-section").forEach(element=>
-				{
-					sections.push(element.querySelector(".denote-section-include").checked)
-				})
-				console.log(sections)
-				currentMidi=convert(currentMidi,{granularity:16,effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false, sections:sections})
-				document.querySelector(".denote-sfx").innerHTML=currentMidi.result.sfx
-				//event.stopPropagation()
+				update()
 			}
-		
+		}
+		update=function()
+		{
+			var sections=[]
+			var section
+			document.querySelectorAll(".denote-section").forEach(element=>
+			{
+				console.log(element.querySelectorAll(".denote-track"))
+				section=sections.push({section:element.querySelector(".denote-section-include").checked, tracks:[]})-1
+				element.querySelectorAll(".denote-track-include").forEach(track=>
+				{
+					sections[section].tracks.push(track.checked)	
+				})
+			})
+			currentMidi=convert(currentMidi,{effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false, sections:sections})
+			document.querySelector(".denote-sfx").innerHTML=currentMidi.result.sfx
 		}
 	</script>
 
