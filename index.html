@@ -86,7 +86,10 @@
 			</div>
 			<input type="file" accept="audio/midi">
 		</div>
-	</tone-content>		
+	</tone-content>
+	<div>
+	<label for="granularity" id="granularityLabel">Granularity: 16th Note </label><input type="range"  class="form-control-range" id="granularity" min="2" max="8" value=4>
+	</div>	
 	<div class="denote-container">
 		
 	</div>	
@@ -136,7 +139,8 @@
 		}
 
 		var currentMidi = null
-
+		var granularityLabel=document.getElementById("granularityLabel")
+		var granularity=document.getElementById("granularity")
 		function parseFile(file)
 		{
 			//read the file
@@ -144,7 +148,7 @@
 			reader.onload = function (e)
 			{
 				const midi = new Midi(e.target.result)
-				currentMidi = convert(analyze(midi))
+				currentMidi = convert(analyze(midi,{granularity:2**granularity.value}))
 				render(currentMidi)
 				update()
 			}
@@ -162,8 +166,8 @@
   </div>
   ${section.channels.reduce((t, track,trackIndex) => t+
 			`<div class="denote-track"><input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
-         checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} Effect: <select name="Effect" class="denote-effect">
-    <option value="0">None</option>
+         checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} Attack: <select name="attack" class="denote-attack">
+    <option value="0">Steady</option>
     <option value="4096">Slide</option>
     <option value="8192">Vibrato</option>
     <option value="12388">Drop</option>
@@ -171,6 +175,29 @@
     <option value="20480">Fade Out</option>
     <option value="24576">Fast Arpeggio</option>
 	<option value="28762">Slow Arpeggio</option>
+	<option value="-1">None</option>
+</select> 
+Sustain: <select name="sustain" class="denote-sustain">
+    <option value="0">Steady</option>
+    <option value="4096">Slide</option>
+    <option value="8192">Vibrato</option>
+    <option value="12388">Drop</option>
+    <option value="16384">Fade In</option>
+    <option value="20480">Fade Out</option>
+    <option value="24576">Fast Arpeggio</option>
+	<option value="28762">Slow Arpeggio</option>
+	<option value="-1">None</option>
+</select>
+Decay: <select name="decay" class="denote-decay">
+    <option value="0">Steady</option>
+    <option value="4096">Slide</option>
+    <option value="8192">Vibrato</option>
+    <option value="12388">Drop</option>
+    <option value="16384">Fade In</option>
+    <option value="20480">Fade Out</option>
+    <option value="24576">Fast Arpeggio</option>
+	<option value="28762">Slow Arpeggio</option>
+	<option value="-1">None</option>
 </select>
  Instrument: <select name="Instrument" class="denote-instrument">
     <option value="0">Triangle</option>
@@ -201,25 +228,71 @@
 		document.addEventListener('change', (e)=>onchange(e))
 		onchange=function(e)
 		{
-			if (e.target.matches(".denote-section-include, .denote-track-include, .denote-instrument, .denote-effect"))
+			if (e.target.matches(".denote-section-include, .denote-track-include, .denote-instrument, .denote-attack, .denote-sustain, .denote-decay"))
 			{
 				update()
+			}
+			else
+			{
+				if (e.target.matches("#granularity"))
+				{
+					
+					switch(e.target.value) 
+					{
+  						case "2":
+    						granularityLabel.innerHTML="Quarter Note Granularity"
+    						break
+						case "3":
+    						granularityLabel.innerHTML="Eighth Note Granularity"
+    						break
+						case "4":
+    						granularityLabel.innerHTML="Sixteenth Note Granularity"
+    						break
+						case "5":
+    						granularityLabel.innerHTML="Thirty-second Note Granularity"
+    						break
+						case "6":
+    						granularityLabel.innerHTML="Sixty-fourth Note Granularity"
+    						break
+						case "7":
+    						granularityLabel.innerHTML="128th Note Granularity"
+    						break
+						case "8":
+    						granularityLabel.innerHTML="256th Note Granularity"
+    						break						
+					}
+					currentMidi=analyze(currentMidi,{granularity:e.target.value})
+					update()
+				}
+				else
+				{
+					if(e.target.matches(".denote-instrument"))
+					{
+						update()
+					}
+				}
 			}
 		}
 		update=function()
 		{
 			var sections=[]
 			var section
-			document.querySelectorAll(".denote-section").forEach(element=>
+			document.querySelectorAll(".denote-section").forEach((element,sectionIndex)=>
 			{
-				console.log(element.querySelectorAll(".denote-track"))
+				currentMidi.result.sections[sectionIndex].include=element.querySelector(".denote-section-include").checked
 				section=sections.push({section:element.querySelector(".denote-section-include").checked, tracks:[]})-1
-				element.querySelectorAll(".denote-track-include").forEach(track=>
+				element.querySelectorAll(".denote-track-include").forEach((track,trackIndex)=>
 				{
-					sections[section].tracks.push(track.checked)	
+					currentMidi.result.sections[sectionIndex].channels[trackIndex].include=track.checked
+					
+				})
+				element.querySelectorAll(".denote-instrument").forEach((instrument,trackIndex)=>
+				{
+					currentMidi.result.sections[sectionIndex].channels[trackIndex].instrument=parseInt(instrument.value)
+					
 				})
 			})
-			currentMidi=convert(currentMidi,{effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false, sections:sections})
+			currentMidi=convert(currentMidi,{effect:"None",filter:0, stacatto:false, legato:false, sections:sections})
 			document.querySelector(".denote-sfx").innerHTML=currentMidi.result.sfx
 		}
 	</script>

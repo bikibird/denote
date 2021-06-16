@@ -87,11 +87,9 @@ function analyze(midi,options={granularity:16})
 					tempo.channels[channelIndex].push(
 					{
 						pitch:track[track.trackIndex].midi-36,
-						//speed:speed,
 						beats:Math.floor(track[track.trackIndex].durationTicks/resolution +.5),
 						volume:Math.floor(7*track[track.trackIndex].velocity+.5),
-						//notes:[]
-						//start:track[track.trackIndex].ticks
+						
 					})
 				}	
 				track.trackIndex++
@@ -102,14 +100,15 @@ function analyze(midi,options={granularity:16})
 		})
 		tempo.channels=tempo.channels.filter(channel=>channel.length>0 && !isEmptyChannel(channel))		
 	})
-	//tempos[0]?.channels[0]?.
+	
+
 
 	midi.result={sections:tempos}
 	return midi
 
 }
 
-function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, stacatto:false, legato:false})
+function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:false})
 {
 	const formatNote=(n)=>
 	{
@@ -129,9 +128,7 @@ function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, sta
 	}
 	var sfxes=[]
 	var patterns=[]
-	//midi.result=null
-	//Check for simultaneous notes and split into multiple tracks
-	
+
 	tempos.forEach((tempo,tempoIndex)=>
 	{
 		tempo.channels.forEach((channel,channelIndex)=>
@@ -142,7 +139,13 @@ function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, sta
 				
 				for (let i = 0; i< note.beats; i++)
 				{
-					sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+pico8.effects[options.effect]+pico8.instruments[options.instrument])
+					if(note.volume>0)
+					{
+						//To do: if i === 0 attack else if i=== beats-1 decay and not stacatto otherwise if not stacato sustain if stacatto 0000
+						
+						sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+pico8.effects[options.effect]+channel.instrument)
+					}
+					else{sfx=sfx+"0000"}	
 				}	
 				channel.sfx=sfx
 				channel.music=[]
@@ -152,11 +155,11 @@ function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, sta
 	let i,step,sfx,remainder,sfxIndex
 	tempos.forEach((tempo,tempoIndex)=>
 	{
-		if (options?.sections?.[tempoIndex].section)
+		if (tempo.include)
 		{
 			tempo.channels.forEach((channel,channelIndex)=>
 			{
-				if (!options?.sections ||options?.sections[tempoIndex].tracks[channelIndex])
+				if (channel.include)
 				{
 					i=0
 					while(i<channel.sfx.length && sfxes.length < 65)
@@ -166,6 +169,7 @@ function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, sta
 						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"0")+formatByte(options.filter)+formatByte(tempo.speed)
 						if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
 						else {sfx=sfx+"0000"}
+
 						if (sfx.slice(2,130)==="".padEnd(128,"0")){channel.music.push(64)}//mute channel
 						else
 						{
@@ -177,16 +181,20 @@ function convert(midi,options={effect:"None",instrument:"Triangle",filter:0, sta
 					}
 				}	
 			})
-			for (let i = 0; i < Math.max(...tempo.channels.map((channel=>channel.music.length))); i++)
+			var channels=tempo.channels.filter(channel=>channel.include).slice(0,4)
+			
+			for (let i = 0; i < Math.max(...channels.map((channel=>channel.music.length))); i++)
 			{
+				
 				if (!(tempo.channels.every(channel=>channel.music[i]===64)))
 				{
+
 					patterns.push(
 					[
-						tempo.channels[0]?.music[i]??64,
-						tempo.channels[1]?.music[i]??64,
-						tempo.channels[2]?.music[i]??64,
-						tempo.channels[3]?.music[i]??64,
+						channels[0]?.music[i]??64,
+						channels[1]?.music[i]??64,
+						channels[2]?.music[i]??64,
+						channels[3]?.music[i]??64,
 					])
 				}
 			}
@@ -219,6 +227,19 @@ function isEmptyChannel(channel)
 		}
 	}
 	return result
+}
+function countSilence(channel)
+{
+	var counter=0
+	for (note of channel)
+	{
+		if (note.volume === 0)
+		{
+			counter++
+		}
+		else {break}
+	}
+	return counter
 }
 
 
