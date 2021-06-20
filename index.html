@@ -89,84 +89,147 @@
 	</tone-content>
 	<div>
 	<label for="granularity" id="granularityLabel">Granularity: 16th Note </label><input type="range"  class="form-control-range" id="granularity" min="2" max="8" value=4>
+	<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" hidden>
+	</canvas>
+	<div id="denote-sfx"></div>
 	</div>	
+	
 	<div class="denote-container">
 		
 	</div>	
 
-
+	<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 <script type="text/javascript" src="denote.js"></script>	
 
-	<script type="text/javascript">
-		if (
-			!(
-				window.File &&
-				window.FileReader &&
-				window.FileList &&
-				window.Blob
-			)
-		) {
-			document.querySelector("#FileDrop #Text").textContent =
-				"Reading files not supported by this browser";
-		} else {
-			const fileDrop = document.querySelector("#FileDrop");
-
-			fileDrop.addEventListener("dragenter", () =>
-				fileDrop.classList.add("Hover")
-			);
-
-			fileDrop.addEventListener("dragleave", () =>
-				fileDrop.classList.remove("Hover")
-			);
-
-			fileDrop.addEventListener("drop", () =>
-				fileDrop.classList.remove("Hover")
-			);
-
-			document
-				.querySelector("#FileDrop input")
-				.addEventListener("change", (e) => {
-					//get the files
-					const files = e.target.files;
-					if (files.length > 0) {
-						const file = files[0];
-						document.querySelector(
-							"#FileDrop #Text"
-						).textContent = file.name;
-						parseFile(file);
-					}
-				});
-		}
-
-		var currentMidi = null
-		var granularityLabel=document.getElementById("granularityLabel")
-		var granularity=document.getElementById("granularity")
-		function parseFile(file)
+<script type="text/javascript">
+	var picoSFXindex=0
+	var picoMusicIndex=0
+	var picoData={sfx:[],music:[]}
+	var pico8_gpio = new Proxy(new Array(128),{
+		set: function(gpio, index, value)
 		{
-			//read the file
-			const reader = new FileReader()
-			reader.onload = function (e)
+    		gpio[index] = value
+    		if (index===0)
 			{
-				const midi = new Midi(e.target.result)
-				currentMidi = convert(analyze(midi,{granularity:2**granularity.value}))
-				render(currentMidi)
-				update()
+				switch (value)
+				{
+					case 1:  //PICO-8 Waiting for data
+						if (picoSFXindex !== picoData.sfx.length)
+						{
+							picoData.sfx[picoSFXindex].forEach((byte,i)=>
+							{
+								gpio[i+1]=byte
+							})
+							picoSFXindex++
+							gpio[0]=2  //Sent SFX data
+						}
+						else
+						{
+							if (picoMusicIndex !== picoData.music.length)
+							{
+								picoData.music[picoMusicIndex].forEach((byte,i)=>
+								{
+									gpio[i+1]=byte
+								})
+								picoMusicIndex++
+								gpio[0]=3 //Sent Music data
+							}
+							else
+							{
+								picoSFXindex=0
+								pircoMusicIndex=0
+							}	
+						}
+						break
+					case 5:  //PICO 8 Play request Ackknowledged
+						break
+					case 7:  //PICO 8 Pause request Acknowledged
+						break	
+					case 9:  //PICO 8 Reset request Acknowledged
+						break		
+					
+				}
 			}
-			reader.readAsArrayBuffer(file)
-		}
+    		return true
+		}})
 	
-		function render(midi)
+
+	if (
+		!(
+			window.File &&
+			window.FileReader &&
+			window.FileList &&
+			window.Blob
+		)
+	) {
+		document.querySelector("#FileDrop #Text").textContent =
+			"Reading files not supported by this browser";
+	} else {
+		const fileDrop = document.querySelector("#FileDrop");
+
+		fileDrop.addEventListener("dragenter", () =>
+			fileDrop.classList.add("Hover")
+		);
+
+		fileDrop.addEventListener("dragleave", () =>
+			fileDrop.classList.remove("Hover")
+		);
+
+		fileDrop.addEventListener("drop", () =>
+			fileDrop.classList.remove("Hover")
+		);
+
+		document
+			.querySelector("#FileDrop input")
+			.addEventListener("change", (e) => {
+				//get the files
+				const files = e.target.files
+				if (files.length > 0) {
+					const file = files[0]
+					document.querySelector(
+						"#FileDrop #Text"
+					).textContent = file.name
+					parseFile(file)
+					p8_create_audio_context()
+					p8_run_cart() 
+				}
+			});
+	}
+
+	var currentMidi = null
+	var granularityLabel=document.getElementById("granularityLabel")
+	var granularity=document.getElementById("granularity")
+	function parseFile(file)
+	{
+		//read the file
+		const reader = new FileReader()
+		reader.onload = function (e)
 		{
-			const {sections,sfx}=midi.result
-			document.querySelector(".denote-container").innerHTML=
-			`${sections.reduce((s, section,index) => s+
+			const midi = new Midi(e.target.result)
+			currentMidi = convert(analyze(midi,{granularity:2**granularity.value}))
+			render(currentMidi)
+			update()
+		}
+		reader.readAsArrayBuffer(file)
+	}
+
+	function render(midi)
+	{
+		const {sections,sfx}=midi.result
+		document.querySelector(".denote-container").innerHTML=
+		`${sections.reduce((s, section,index) => s+
 				`<div class="denote-section">
 					<div><input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
          checked class="denote-section-include"> Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  
   </div>
   ${section.channels.reduce((t, track,trackIndex) => t+
-			`<div class="denote-track"><input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
-         checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} Attack: <select name="attack" class="denote-attack">
+			`<div class="denote-track">
+				<input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
+         checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} 
+		 
+	Attack: <select name="attack" class="denote-attack">
     <option value="0">Steady</option>
     <option value="4096">Slide</option>
     <option value="8192">Vibrato</option>
@@ -217,85 +280,153 @@ Decay: <select name="decay" class="denote-decay">
     <option value="33152">Custom 6</option>
 	<option value="33216">Custom 7</option>
 </select>
+<div class="denote-filter">
+	<div class="btn-group btn-group-toggle" data-toggle="buttons">
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="noise" value="2">Noise
+		</label>
+		<label class="btn btn-sm btn-outline-info active">
+			<input type="radio" name="noise" checked value="0">Off
+		</label>
+	</div>
+	<div class="btn-group btn-group-toggle" data-toggle="buttons">
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="buzz" value="4">Buzz
+		</label>
+		<label class="btn btn-sm btn-outline-info active">
+			<input type="radio" name="buzz" checked value="0">Off
+		</label>
+	</div>
+	<div class="btn-group btn-group-toggle" data-toggle="buttons">
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="detune" value="8">Detune
+		</label>
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="detune" value="16">More
+		</label>
+		<label class="btn btn-sm btn-outline-info active">
+			<input type="radio" name="detune" checked value="0">Off
+		</label>
+	</div>
+	<div class="btn-group btn-group-toggle" data-toggle="buttons">
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="reverb" value="24">Reverb
+		</label>
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="reverb" value="48">More
+		</label>
+		<label class="btn btn-sm btn-outline-info active">
+			<input type="radio" name="reverb" checked value="0">Off
+		</label>
+	</div>
+	<div class="btn-group btn-group-toggle" data-toggle="buttons">
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="dampen" value="72">Dampen
+		</label>
+		<label class="btn btn-sm btn-outline-info">
+			<input type="radio" name="dampen" value="144">More
+		</label>
+		<label class="btn btn-sm btn-outline-info active">
+			<input type="radio" name="dampen" checked value="0">Off
+		</label>
+	</div>
+</div>	
+
+
 				</div>`,"")}
 				
 				</div>`
-			,"")}
+			,"")}`
 			
-			<p class="denote-sfx">${midi.result.sfx}</p>`
-			
-		}
-		document.addEventListener('change', (e)=>onchange(e))
-		onchange=function(e)
+	}
+	document.addEventListener('change', (e)=>onchange(e))
+	onchange=function(e)
+	{
+		if (e.target.matches(".denote-section-include,.denote-track-include,.denote-instrument,.denote-attack,.denote-sustain,.denote-decay,input[type='radio']"))
 		{
-			if (e.target.matches(".denote-section-include, .denote-track-include, .denote-instrument, .denote-attack, .denote-sustain, .denote-decay"))
+			update()
+		}
+		else
+		{
+			if (e.target.matches("#granularity"))
 			{
+				
+				switch(e.target.value) 
+				{
+					case "2":
+						granularityLabel.innerHTML="Quarter Note Granularity"
+						break
+					case "3":
+						granularityLabel.innerHTML="Eighth Note Granularity"
+						break
+					case "4":
+						granularityLabel.innerHTML="Sixteenth Note Granularity"
+						break
+					case "5":
+						granularityLabel.innerHTML="Thirty-second Note Granularity"
+						break
+					case "6":
+						granularityLabel.innerHTML="Sixty-fourth Note Granularity"
+						break
+					case "7":
+						granularityLabel.innerHTML="128th Note Granularity"
+						break
+					case "8":
+						granularityLabel.innerHTML="256th Note Granularity"
+						break						
+				}
+				currentMidi=analyze(currentMidi,{granularity:2**e.target.value})
 				update()
 			}
 			else
 			{
-				if (e.target.matches("#granularity"))
+				if(e.target.matches(".denote-instrument"))
 				{
-					
-					switch(e.target.value) 
-					{
-  						case "2":
-    						granularityLabel.innerHTML="Quarter Note Granularity"
-    						break
-						case "3":
-    						granularityLabel.innerHTML="Eighth Note Granularity"
-    						break
-						case "4":
-    						granularityLabel.innerHTML="Sixteenth Note Granularity"
-    						break
-						case "5":
-    						granularityLabel.innerHTML="Thirty-second Note Granularity"
-    						break
-						case "6":
-    						granularityLabel.innerHTML="Sixty-fourth Note Granularity"
-    						break
-						case "7":
-    						granularityLabel.innerHTML="128th Note Granularity"
-    						break
-						case "8":
-    						granularityLabel.innerHTML="256th Note Granularity"
-    						break						
-					}
-					currentMidi=analyze(currentMidi,{granularity:e.target.value})
 					update()
-				}
-				else
-				{
-					if(e.target.matches(".denote-instrument"))
-					{
-						update()
-					}
 				}
 			}
 		}
-		update=function()
+	}
+	update=function()
+	{
+		var sections=[]
+		var section
+		var filter
+		document.querySelectorAll(".denote-section").forEach((element,sectionIndex)=>
 		{
-			var sections=[]
-			var section
-			document.querySelectorAll(".denote-section").forEach((element,sectionIndex)=>
+			currentMidi.result.sections[sectionIndex].include=element.querySelector(".denote-section-include").checked
+			section=sections.push({section:element.querySelector(".denote-section-include").checked, tracks:[]})-1
+			element.querySelectorAll(".denote-track-include").forEach((track,trackIndex)=>
 			{
-				currentMidi.result.sections[sectionIndex].include=element.querySelector(".denote-section-include").checked
-				section=sections.push({section:element.querySelector(".denote-section-include").checked, tracks:[]})-1
-				element.querySelectorAll(".denote-track-include").forEach((track,trackIndex)=>
-				{
-					currentMidi.result.sections[sectionIndex].channels[trackIndex].include=track.checked
-					
-				})
-				element.querySelectorAll(".denote-instrument").forEach((instrument,trackIndex)=>
-				{
-					currentMidi.result.sections[sectionIndex].channels[trackIndex].instrument=parseInt(instrument.value)
-					
-				})
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].include=track.checked
 			})
-			currentMidi=convert(currentMidi,{effect:"None",filter:0, stacatto:false, legato:false, sections:sections})
-			document.querySelector(".denote-sfx").innerHTML=currentMidi.result.sfx
-		}
+			element.querySelectorAll(".denote-instrument").forEach((instrument,trackIndex)=>
+			{
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].instrument=parseInt(instrument.value)
+			})
+			element.querySelectorAll(".denote-attack").forEach((attack,trackIndex)=>
+			{
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].attack=parseInt(attack.value)
+			})
+			element.querySelectorAll(".denote-sustain").forEach((sustain,trackIndex)=>
+			{
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].sustain=parseInt(sustain.value)
+			})
+			element.querySelectorAll(".denote-decay").forEach((decay,trackIndex)=>
+			{
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].decay=parseInt(decay.value)
+			})
+			element.querySelectorAll(".denote-filter").forEach((filter,trackIndex)=>
+			{
+				result=0
+				filter.querySelectorAll(" input").forEach(input=>result+=input.checked?parseInt(input.value):0)
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].sfxFilter=result
+			})
+		})
+		currentMidi=convert(currentMidi,{effect:"None",filter:0, stacatto:false, legato:false, sections:sections})
+		document.querySelector("#denote-sfx").innerHTML=currentMidi.result.sfx
+	}
 	</script>
-
+	<script src="pico8shell.js"></script>
 </body>
 </html>	
