@@ -75,9 +75,7 @@
 	<script type="text/javascript" src="https://unpkg.com/@tonejs/midi"></script>
 </head>
 <body>
-	<!--input type="file" class="d-none" accept=".mid,.midi" id="fileInput"/>
-	<h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1>
-  <input class="btn btn-info" type="button" value="Load MIDI File" id="loadButton"-->
+
 	<h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1>
    <tone-content>
 		<div id="FileDrop">
@@ -89,8 +87,9 @@
 	</tone-content>
 	<div>
 	<label for="granularity" id="granularityLabel">Granularity: 16th Note </label><input type="range"  class="form-control-range" id="granularity" min="2" max="8" value=4>
-	<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" hidden>
+	<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" >
 	</canvas>
+	<button class="btn btn-info d-none" id="denote-play" type="button">Play</button>
 	<div id="denote-sfx"></div>
 	</div>	
 	
@@ -106,30 +105,34 @@
 <script type="text/javascript">
 	var picoSFXindex=0
 	var picoMusicIndex=0
-	var picoData={sfx:[],music:[]}
 	var pico8_gpio = new Proxy(new Array(128),{
-		set: function(gpio, index, value)
+		set: function(gpio, property, value)
 		{
-    		gpio[index] = value
+			var index=parseInt(property)
+			gpio[index] = value
     		if (index===0)
 			{
 				switch (value)
 				{
 					case 1:  //PICO-8 Waiting for data
-						if (picoSFXindex !== picoData.sfx.length)
+						
+						if (currentMidi?.result?.sfxes && picoSFXindex !== currentMidi.result.sfxes.length )
 						{
-							picoData.sfx[picoSFXindex].forEach((byte,i)=>
+							var sfx=currentMidi.result.sfxes[picoSFXindex]
+							for (let i = 2; i < sfx.length; i+=2)
 							{
-								gpio[i+1]=byte
-							})
+								gpio[i/2]=parseInt(sfx[i]+sfx[i+1],16)
+								
+							}
 							picoSFXindex++
 							gpio[0]=2  //Sent SFX data
 						}
 						else
 						{
-							if (picoMusicIndex !== picoData.music.length)
+							if (currentMidi?.result?.music && picoMusicIndex !== currentMidi.result.music.length)
 							{
-								picoData.music[picoMusicIndex].forEach((byte,i)=>
+								var music=currentMidi.result.music[picoMusicIndex]
+								music.forEach((byte,i)=>
 								{
 									gpio[i+1]=byte
 								})
@@ -139,7 +142,7 @@
 							else
 							{
 								picoSFXindex=0
-								pircoMusicIndex=0
+								picoMusicIndex=0
 							}	
 						}
 						break
@@ -148,6 +151,7 @@
 					case 7:  //PICO 8 Pause request Acknowledged
 						break	
 					case 9:  //PICO 8 Reset request Acknowledged
+						gpio[0]=0 //request to send data
 						break		
 					
 				}
@@ -156,47 +160,47 @@
 		}})
 	
 
-	if (
-		!(
-			window.File &&
-			window.FileReader &&
-			window.FileList &&
-			window.Blob
-		)
-	) {
-		document.querySelector("#FileDrop #Text").textContent =
-			"Reading files not supported by this browser";
-	} else {
+	if (!(window.File && window.FileReader && window.FileList && window.Blob))
+	{
+		document.querySelector("#FileDrop #Text").textContent ="Reading files not supported by this browser";
+	} 
+	else
+	{
 		const fileDrop = document.querySelector("#FileDrop");
 
 		fileDrop.addEventListener("dragenter", () =>
 			fileDrop.classList.add("Hover")
-		);
+		)
 
 		fileDrop.addEventListener("dragleave", () =>
 			fileDrop.classList.remove("Hover")
-		);
+		)
 
 		fileDrop.addEventListener("drop", () =>
 			fileDrop.classList.remove("Hover")
-		);
+		)
 
-		document
-			.querySelector("#FileDrop input")
-			.addEventListener("change", (e) => {
-				//get the files
-				const files = e.target.files
-				if (files.length > 0) {
-					const file = files[0]
-					document.querySelector(
-						"#FileDrop #Text"
-					).textContent = file.name
-					parseFile(file)
-					p8_create_audio_context()
-					p8_run_cart() 
-				}
-			});
+		document.querySelector("#FileDrop input").addEventListener("change", (e) => 
+		{
+			const files = e.target.files
+			if (files.length > 0) {
+				const file = files[0]
+				document.querySelector("#FileDrop #Text").textContent = file.name
+				parseFile(file)
+				document.querySelector("#denote-play").classList.remove("d-none")
+			}
+		})
+		document.querySelector("#FileDrop input").addEventListener("click", (e) => 
+		{
+			p8_create_audio_context()
+			p8_run_cart() 
+		})
+		document.querySelector("#denote-play").addEventListener("click",(e)=>
+		{
+			pico8_gpio[0]=4  //Play music
+		})
 	}
+
 
 	var currentMidi = null
 	var granularityLabel=document.getElementById("granularityLabel")
@@ -211,6 +215,7 @@
 			currentMidi = convert(analyze(midi,{granularity:2**granularity.value}))
 			render(currentMidi)
 			update()
+			pico8_gpio[0]=8 //Reset PICO 8 counters etc
 		}
 		reader.readAsArrayBuffer(file)
 	}
@@ -424,6 +429,7 @@ Decay: <select name="decay" class="denote-decay">
 			})
 		})
 		currentMidi=convert(currentMidi,{effect:"None",filter:0, stacatto:false, legato:false, sections:sections})
+		pico8_gpio[0]=8 //Reset PICO 8 counters etc
 		document.querySelector("#denote-sfx").innerHTML=currentMidi.result.sfx
 	}
 	</script>

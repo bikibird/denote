@@ -1,4 +1,3 @@
-
 function analyze(midi,options={granularity:16})
 {
 
@@ -126,6 +125,7 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 		volumes:[0, 512, 1024, 1536, 2048, 2560, 3072, 3584],
 		instruments:{"Triangle": 0, "Tilted Saw": 64, "Saw": 128, "Square": 192, "Pulse": 256, "Organ": 320, "Noise": 384, "Phaser" :448, "Custom 0": 32768, "Custom 1": 32832,"Custom 2": 32896,"Custom 3": 32960,"Custom 4": 33024,"Custom 5": 33088,"Custom 6": 33152,"Custom 7": 33216},
 	}
+	midi.result.pico8Data={sfx:[],music:[]}
 	var sfxes=[]
 	var patterns=[]
 
@@ -142,8 +142,34 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 					if(note.volume>0)
 					{
 						//To do: if i === 0 attack else if i=== beats-1 decay and not stacatto otherwise if not stacato sustain if stacatto 0000
-						
-						sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+pico8.effects[options.effect]+channel.instrument)
+
+						if (i===0)
+						{
+							if (channel.attack===-1){sfx=sfx+"0000"}
+							else
+							{
+								sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.attack+channel.instrument)
+							}	
+						}
+						else
+						{
+							if (i===note.beats-1)
+							{
+								if (channel.decay===-1){sfx=sfx+"0000"}
+								else
+								{
+									sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.decay+channel.instrument)
+								}
+							}	
+							else
+							{
+								if (channel.sustain===-1){sfx=sfx+"0000"}
+								else
+								{
+									sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.sustain+channel.instrument)
+								}	
+							}
+						}
 					}
 					else{sfx=sfx+"0000"}	
 				}	
@@ -166,7 +192,7 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 					{
 						remainder=channel.sfx.length-i
 						step=(remainder>128)?128:remainder
-						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"0")+formatByte(options.filter)+formatByte(tempo.speed)
+						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"0")+formatByte(channel.sfxFilter)+formatByte(tempo.speed)
 						if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
 						else {sfx=sfx+"0000"}
 
@@ -211,7 +237,7 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 			if (index <patterns.length-1){result=result+"0"}
 			else{result=result+"4"}
 		})
-	midi.result={sfx:result+"[/sfx]",sections:tempos}
+	midi.result={sfx:result+"[/sfx]",sections:tempos,sfxes:sfxes,music:patterns}
 	return midi
 
 }
