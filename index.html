@@ -43,7 +43,7 @@
 <script type="text/javascript" src="denote.js"></script>	
 
 <script type="text/javascript">
-	var pausedFlag=true
+	var stoppedFlag=true
 	var picoSFXindex=0
 	var picoMusicIndex=0
 	var pico8_gpio = new Proxy(new Array(128),{
@@ -89,16 +89,18 @@
 						}
 						break
 					case 5:  //PICO 8 Play request Ackknowledged
-						pausedFlag=false
-						document.querySelector("#denote-play").innerHTML="Pause"
+						stoppedFlag=false
+						document.querySelector("#denote-play").innerHTML="Stop"
+						document.querySelector(".denote-player").classList.add("denote-player-playing")
 						break
-					case 7:  //PICO 8 Pause request Acknowledged
-						pausedFlag=true
+					case 7:  //PICO 8 Stop request Acknowledged
+						stoppedFlag=true
 						document.querySelector("#denote-play").innerHTML="Play"
+						document.querySelector(".denote-player").classList.remove("denote-player-playing")
 						break	
 					case 9:  //PICO 8 Reset request Acknowledged
 						document.querySelector("#denote-play").setAttribute("disabled",true)
-						pausedFlag=true
+						stoppedFlag=true
 						document.querySelector("#denote-play").innerHTML="Play"	
 						picoSFXindex=0
 						picoMusicIndex=0
@@ -155,13 +157,13 @@
 		})
 		document.querySelector("#denote-play").addEventListener("click",(e)=>
 		{
-			if (pausedFlag)
+			if (stoppedFlag)
 			{
 				pico8_gpio[0]=4  //Play music
 			}
 			else
 			{
-				pico8_gpio[0]=6  //Pause music
+				pico8_gpio[0]=6  //Stop music
 			}
 		})
 	}

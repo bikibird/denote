@@ -2,66 +2,107 @@ pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
 function _init()
-	gpioAddress=0x5f80
-	musicAddress=0x3100
-	sfxAddress=0x3200
-	musicIndex=0
-	sfxIndex=0
-	cls()
+	gpioaddress=0x5f80
+	musicaddress=0x3100
+	sfxaddress=0x3200
+	screenaddress=0x6000
+	musicindex=0
+	sfxindex=0
+	cls(0)
+	color(7)
+	msg=""
+	_draw=message
+	pitches={}
 end
 
 function _update()
-	if (peek(gpioAddress)==0) then  --request permission to send data
-		poke(gpioAddress,1)  --ready to receive data
-		print("\^w\^t ready")
+	msg=""
+	if (peek(gpioaddress)==0) then  --request permission to send data
+		poke(gpioaddress,1)  --ready to receive data
+		msg="\^w\^t ready"
 		return
 	end	
-	if (peek(gpioAddress)==2) then  --sent sfx
-		print("\^w\^t txf sfx")
+	if peek(gpioaddress)==2 then  --sent sfx
+		msg="\^w\^t txf sfx"
 		for i=0,67 do
-			poke(sfxAddress+sfxIndex*68+i,peek(gpioAddress+i+1))
+			poke(sfxaddress+sfxindex*68+i,peek(gpioaddress+i+1))
 		end
-		sfxIndex+=1
-		poke(gpioAddress,1)  --ready for more data
+		sfxindex+=1
+		poke(gpioaddress,1)  --ready for more data
 		return
 	end	
-	if (peek(gpioAddress)==3) then  --sent music
-		print("\^w\^t txf music")
+	if peek(gpioaddress)==3 then  --sent music
+		msg="\^w\^t txf music"
 		for i=0,3 do
-			poke(musicAddress+musicIndex*4+i,peek(gpioAddress+i+1))
+			poke(musicaddress+musicindex*4+i,peek(gpioaddress+i+1))
 		end
-		musicIndex+=1
-		poke(gpioAddress,1)  --ready for more data
+		musicindex+=1
+		poke(gpioaddress,1)  --ready for more data
 		return
 	end	
-	if (peek(gpioAddress)==4) then  --request play
-		print("\^w\^t play")
+	if peek(gpioaddress)==4 then  --request play
 		music(0)
-		poke(gpioAddress,5)  --acknowledge play
+		cls(7)
+		_draw=visualize
+		poke(gpioaddress,5)  --acknowledge play
 		return
 	end	
-	if (peek(gpioAddress)==6) then --request pause
-		print("\^w\^t pause")
+	if peek(gpioaddress)==6 then --request pause
+		msg="\^w\^t pause"
 		music(-1)
-		poke(gpioAddress,7)  --acknowledge pause
+		cls(0)
+		_draw=message
+		poke(gpioaddress,7)  --acknowledge pause
 		return
 	end	
-	if (peek(gpioAddress)==8) then --reset
+	if peek(gpioaddress)==8 then --reset
 		music(-1)
-		sfxIndex=0
-		musicIndex=0
+		sfxindex=0
+		musicindex=0
 		for i=0,255 do
-			poke(musicAddress+i,64)
+			poke(musicaddress+i,64)
 		end	
-		poke(gpioAddress,9)  --acknowledge reset
+		cls(0)
+		_draw=message
+		poke(gpioaddress,9)  --acknowledge reset
 		return
 	end	
-	if (peek(gpioAddress)==10) then --request pause
-		poke(gpioAddress,11)  --done
-		print("\^w\^t txf complete")
+	if peek(gpioaddress)==10 then --request pause
+		poke(gpioaddress,11)  --done
+		msg="\^w\^t txf complete"
 		return
 	end
+	--if stat(24)==-1 then
+	--	cls(0)
+	--	_draw=message
+	--end
+	pitches={}
+	if stat(24)>-1 then
+		
+		for i = 0, 4 do
+			noteindex = stat(20 + i)
+			sfxindex = stat(16 + i)
+			if sfxindex > -1 then
+				if band(shr(peek(sfxaddress+sfxindex*68+noteindex*2+1),1),7) >0 then
+					add(pitches,band(peek(sfxaddress+sfxindex*68+noteindex*2),63)*2)
+				end
+			end	
+		end	
+	end
 end
+function visualize()
+		line(0,127,127,127,7)
+		for i=1,#pitches do
+			line(pitches[i],127,pitches[i]+1,127,i)
+		end
+		memcpy(screenaddress,screenaddress+128,8064)  --shift up one row.
+end
+function message()
+	if not(msg == "") then
+		print(msg,7)
+	end	
+end
+
 __label__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

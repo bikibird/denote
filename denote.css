@@ -1,23 +1,24 @@
 .denote-player {
 	cursor: none;
-	width:144px;
-	height:144px;
+	width:150px;
+	height:130px;
 	border-radius: 10% / 50%;
 	border-width: 1px;
-	box-shadow: 0 0 2px #17a2b8;;
+	box-shadow: 0 0 3px #17a2b8;
 	margin:1.5%;
 	background-color: black;
 }
 
 .denote-player-playing
 {
-	background-color: #ffccaa;;
+	background-color: #fff1e8;
 }
 
 canvas
 {
-	margin-left:8px;
-	margin-top:8px;
+	margin-left:10px;
+	margin-top:1px;
+	
 }
 #FileDrop:before {
     content: '';
