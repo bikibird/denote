@@ -6,7 +6,9 @@
 	border-width: 1px;
 	box-shadow: 0 0 3px #17a2b8;
 	margin:1.5%;
+	margin-top:3em;
 	background-color: black;
+	
 }
 
 .denote-player-playing
@@ -52,14 +54,27 @@ canvas
 	left: 0px;
 	top: 0px;
 }
-#FileDrop #Text {
+#FileDrop #Text
+{
 	position: absolute;
 	width: 100%;
-	height: 20px;
-	line-height: 20px;
-	left: 0px;
 	top: 50%;
 	transform: translate(0, -50%);
-	text-align: center;
+	padding:10%
 }
 
+#granularity
+{
+	width:192px;
+	margin-top:.5em;
+}
+#granularityLabel
+{
+	width:192px;
+	text-align: center;
+}
+.btn-group
+{
+	padding-left: 0;
+	padding-bottom: 15px;
+}

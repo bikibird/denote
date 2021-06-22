@@ -6,41 +6,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
 <link rel="stylesheet" href="denote.css">
-<script type="text/javascript" src="https://unpkg.com/tone@14.7.39/build/Tone.js"></script>
-<script type="text/javascript" src="https://unpkg.com/@tonejs/ui@0.0.8/build/tonejs-ui.js"></script>
-
-
-	<script type="text/javascript" src="https://unpkg.com/@tonejs/midi"></script>
 </head>
 <body>
-
-	<h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1>
-   <tone-content>
-		<div id="FileDrop">
-			<div id="Text">
-				Drop MIDI file here or click to choose file.
-			</div>
-			<input type="file" accept="audio/midi">
-		</div>
-	</tone-content>
-	<div>
-	<label for="granularity" id="granularityLabel">Granularity: 16th Note </label><input type="range"  class="form-control-range" id="granularity" min="2" max="8" value=4>
-	<div class="denote-player">
-		<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" >
-		</canvas>
-	</div>
-	<button class="btn btn-info" id="denote-play" type="button" disabled>Play</button>
-	<div id="denote-sfx"></div>
-	</div>	
 	
-	<div class="denote-container">
+	<div class="container">
+		<div class="row"><div class="col-md-auto"><h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1></div></div>
+		<div class="row">
+			<div class="col-md-auto">
+				<div class="row">
+					<div>
+						<div id="FileDrop">
+							<div  id="Text">Drop MIDI file here or click to choose file.</div>
+							<input type="file" accept="audio/midi">
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<input type="range"  class="form-control-range" id="granularity" min="2" max="8" value=4>
+				</div>
+				<div class="row">
+					<label for="granularity" id="granularityLabel">Resolution: 16th Note</label>
+				</div>
+			</div>
+			<div class="col-md">
+				<div class="row"> 
+					<div class="col-md-auto">
+						<div class="denote-player">
+							<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" >
+							</canvas>
+						</div>
+						<button class="btn btn-info" id="denote-play" type="button" disabled>Play</button>
+						<button class="btn btn-info" id="denote-copy" type="button" disabled>Copy SFX</button>
+						<span id="denote-sfx" class="d-none"></span>
+						<span class="text-info d-none" id="copied"><em> Copied!</em></span>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-auto">
+				<div class="denote-container"></div>	
+			</div>
+		</div>
+	</div>
 		
-	</div>	
-
 	<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-<script type="text/javascript" src="denote.js"></script>	
+	<script type="text/javascript" src="midi.js"></script>
+	<script type="text/javascript" src="denote.js"></script>	
 
 <script type="text/javascript">
 	var stoppedFlag=true
@@ -100,6 +112,7 @@
 						break	
 					case 9:  //PICO 8 Reset request Acknowledged
 						document.querySelector("#denote-play").setAttribute("disabled",true)
+						document.querySelector("#denote-copy").setAttribute("disabled",true)
 						stoppedFlag=true
 						document.querySelector("#denote-play").innerHTML="Play"	
 						picoSFXindex=0
@@ -108,6 +121,7 @@
 						break		
 					case 11:  //PICO 8 transfer complete acknowledged
 						document.querySelector("#denote-play").removeAttribute("disabled")
+						document.querySelector("#denote-copy").removeAttribute("disabled")
 						break
 				}
 			}
@@ -166,6 +180,21 @@
 				pico8_gpio[0]=6  //Stop music
 			}
 		})
+		document.querySelector("#denote-copy").addEventListener("click",(e)=>
+		{
+			var sfx=document.getElementById("denote-sfx")
+			sfx.classList.remove("d-none")
+			var range = document.createRange()
+			range.selectNode(sfx)
+			window.getSelection().removeAllRanges()
+			window.getSelection().addRange(range)
+			document.execCommand('copy')
+			window.getSelection().removeAllRanges()
+			sfx.classList.add("d-none")
+			var copied= document.getElementById("copied")
+			copied.classList.remove("d-none")
+			setTimeout(()=>copied.classList.add("d-none"), 1000)
+		})
 	}
 
 
@@ -191,123 +220,163 @@
 		const {sections,sfx}=midi.result
 		document.querySelector(".denote-container").innerHTML=
 		`${sections.reduce((s, section,index) => s+
-				`<div class="denote-section">
-					<div><input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
-         checked class="denote-section-include"> Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  
-  </div>
+`<div class="denote-section card">
+	<div class="card-header">
+		<input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
+			checked class="denote-section-include"> Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  
+	</div>
+	<div card-body">
+		<ul class="list-group list-group-flush">
   ${section.channels.reduce((t, track,trackIndex) => t+
-			`<div class="denote-track">
-				<input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
+	`
+			<li class="denote-track list-group-item">
+				<div class="row">
+					<div class="col-md-auto">
+						<input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
          checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} 
-		 
-	Attack: <select name="attack" class="denote-attack">
-    <option value="0">Steady</option>
-    <option value="4096">Slide</option>
-    <option value="8192">Vibrato</option>
-    <option value="12388">Drop</option>
-    <option value="16384">Fade In</option>
-    <option value="20480">Fade Out</option>
-    <option value="24576">Fast Arpeggio</option>
-	<option value="28762">Slow Arpeggio</option>
-	<option value="-1">None</option>
-</select> 
-Sustain: <select name="sustain" class="denote-sustain">
-    <option value="0">Steady</option>
-    <option value="4096">Slide</option>
-    <option value="8192">Vibrato</option>
-    <option value="12388">Drop</option>
-    <option value="16384">Fade In</option>
-    <option value="20480">Fade Out</option>
-    <option value="24576">Fast Arpeggio</option>
-	<option value="28762">Slow Arpeggio</option>
-	<option value="-1">None</option>
-</select>
-Decay: <select name="decay" class="denote-decay">
-    <option value="0">Steady</option>
-    <option value="4096">Slide</option>
-    <option value="8192">Vibrato</option>
-    <option value="12388">Drop</option>
-    <option value="16384">Fade In</option>
-    <option value="20480">Fade Out</option>
-    <option value="24576">Fast Arpeggio</option>
-	<option value="28762">Slow Arpeggio</option>
-	<option value="-1">None</option>
-</select>
- Instrument: <select name="Instrument" class="denote-instrument">
-    <option value="0">Triangle</option>
-    <option value="64">Tilted Saw</option>
-    <option value="128">Saw</option>
-    <option value="192">Square</option>
-    <option value="256">Pulse</option>
-    <option value="320">Organ</option>
-    <option value="384">Noise</option>
-	<option value="448">Phaser</option>
-	<option value="32768">Custom 0</option>
-    <option value="32832">Custom 1</option>
-    <option value="32896">Custom 2</option>
-    <option value="32960">Custom 3</option>
-    <option value="33024">Custom 4</option>
-    <option value="33088">Custom 5</option>
-    <option value="33152">Custom 6</option>
-	<option value="33216">Custom 7</option>
-</select>
-<div class="denote-filter">
-	<div class="btn-group btn-group-toggle" data-toggle="buttons">
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="noise" value="2">Noise
-		</label>
-		<label class="btn btn-sm btn-outline-info active">
-			<input type="radio" name="noise" checked value="0">Off
-		</label>
+					</div>
+					<div class="col-md-auto">
+						<div class="input-group input-group-sm mb-3">
+  							<div class="input-group-prepend">
+    							<label class="input-group-text" for="instrument">Instrument</label>
+  							</div>
+							<select name="Instrument" class="denote-instrument form-select custom-select" id="instrument">
+								<option value="0">Triangle</option>
+								<option value="64">Tilted Saw</option>
+								<option value="128">Saw</option>
+								<option value="192">Square</option>
+								<option value="256">Pulse</option>
+								<option value="320">Organ</option>
+								<option value="384">Noise</option>
+								<option value="448">Phaser</option>
+								<option value="32768">Custom 0</option>
+								<option value="32832">Custom 1</option>
+								<option value="32896">Custom 2</option>
+								<option value="32960">Custom 3</option>
+								<option value="33024">Custom 4</option>
+								<option value="33088">Custom 5</option>
+								<option value="33152">Custom 6</option>
+								<option value="33216">Custom 7</option>
+							</select>
+						</div>	
+					</div>	
+					<div class="col-md-auto">	
+						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="noise" value="2">Noise
+							</label>
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="noise" checked value="0">Off
+							</label>
+						</div>
+					</div>	
+				</div>	
+				<div class="denote-filter row">
+					<div class="col-md-auto">
+						
+						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="buzz" value="4">Buzz
+							</label>
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="buzz" checked value="0">Off
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="detune" value="8">Detune
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="detune" value="16">More
+							</label>
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="detune" checked value="0">Off
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="reverb" value="24">Reverb
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="reverb" value="48">More
+							</label>
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="reverb" checked value="0">Off
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="dampen" value="72">Dampen
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="dampen" value="144">More
+							</label>
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="dampen" checked value="0">Off
+							</label>
+						</div>
+					</div>	
+				</div>	
+				<div class="row">
+					<div class="col-md-auto">
+						<div class="input-group input-group-sm mb-3">
+  							<div class="input-group-prepend">
+    							<label class="input-group-text" for="attack">Attack</label>
+  							</div>
+							<select name="attack" class="denote-attack form-select custom-select" id="attack">
+								<option value="0">Steady</option>
+								<option value="4096">Slide</option>
+								<option value="8192">Vibrato</option>
+								<option value="12388">Drop</option>
+								<option value="16384">Fade In</option>
+								<option value="20480">Fade Out</option>
+								<option value="24576">Fast Arpeggio</option>
+								<option value="28762">Slow Arpeggio</option>
+								<option value="-1">None</option>
+							</select> 
+						</div>	
+					</div>
+					<div class="col-md-auto">
+						<div class="input-group input-group-sm mb-3">
+  							<div class="input-group-prepend">
+    							<label class="input-group-text input-group-text-sm" for="sustain">Sustain</label>
+  							</div>
+							<select name="sustain" class="denote-sustain form-select custom-select" id="sustain">
+								<option value="0">Steady</option>
+								<option value="4096">Slide</option>
+								<option value="8192">Vibrato</option>
+								<option value="12388">Drop</option>
+								<option value="16384">Fade In</option>
+								<option value="20480">Fade Out</option>
+								<option value="24576">Fast Arpeggio</option>
+								<option value="28762">Slow Arpeggio</option>
+								<option value="-1">None</option>
+							</select>
+						</div>	
+					</div>
+					<div class="col-md-auto">
+						<div class="input-group input-group-sm mb-3">
+  							<div class="input-group-prepend">
+    							<label class="input-group-text input-group-text-sm" for="decay">Decay</label>
+  							</div>
+							<select name="decay" class="denote-decay form-select custom-select" id="decay">
+								<option value="0">Steady</option>
+								<option value="4096">Slide</option>
+								<option value="8192">Vibrato</option>
+								<option value="12388">Drop</option>
+								<option value="16384">Fade In</option>
+								<option value="20480">Fade Out</option>
+								<option value="24576">Fast Arpeggio</option>
+								<option value="28762">Slow Arpeggio</option>
+								<option value="-1">None</option>
+							</select>
+						</div>	
+					</div>
+				</div>
+			</li>
+		</ul>`,"")}  
 	</div>
-	<div class="btn-group btn-group-toggle" data-toggle="buttons">
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="buzz" value="4">Buzz
-		</label>
-		<label class="btn btn-sm btn-outline-info active">
-			<input type="radio" name="buzz" checked value="0">Off
-		</label>
-	</div>
-	<div class="btn-group btn-group-toggle" data-toggle="buttons">
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="detune" value="8">Detune
-		</label>
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="detune" value="16">More
-		</label>
-		<label class="btn btn-sm btn-outline-info active">
-			<input type="radio" name="detune" checked value="0">Off
-		</label>
-	</div>
-	<div class="btn-group btn-group-toggle" data-toggle="buttons">
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="reverb" value="24">Reverb
-		</label>
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="reverb" value="48">More
-		</label>
-		<label class="btn btn-sm btn-outline-info active">
-			<input type="radio" name="reverb" checked value="0">Off
-		</label>
-	</div>
-	<div class="btn-group btn-group-toggle" data-toggle="buttons">
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="dampen" value="72">Dampen
-		</label>
-		<label class="btn btn-sm btn-outline-info">
-			<input type="radio" name="dampen" value="144">More
-		</label>
-		<label class="btn btn-sm btn-outline-info active">
-			<input type="radio" name="dampen" checked value="0">Off
-		</label>
-	</div>
-</div>	
-
-
-				</div>`,"")}
-				
-				</div>`
-			,"")}`
+</div>`,"")}` //card
 			
 	}
 	document.addEventListener('change', (e)=>onchange(e))
@@ -325,25 +394,25 @@ Decay: <select name="decay" class="denote-decay">
 				switch(e.target.value) 
 				{
 					case "2":
-						granularityLabel.innerHTML="Quarter Note Granularity"
+						granularityLabel.innerHTML="Quarter Note Resolution"
 						break
 					case "3":
-						granularityLabel.innerHTML="Eighth Note Granularity"
+						granularityLabel.innerHTML="Eighth Note Resolution"
 						break
 					case "4":
-						granularityLabel.innerHTML="Sixteenth Note Granularity"
+						granularityLabel.innerHTML="Sixteenth Note Resolution"
 						break
 					case "5":
-						granularityLabel.innerHTML="Thirty-second Note Granularity"
+						granularityLabel.innerHTML="32nd Note Resolution"
 						break
 					case "6":
-						granularityLabel.innerHTML="Sixty-fourth Note Granularity"
+						granularityLabel.innerHTML="64th Note Resolution"
 						break
 					case "7":
-						granularityLabel.innerHTML="128th Note Granularity"
+						granularityLabel.innerHTML="128th Note Resolution"
 						break
 					case "8":
-						granularityLabel.innerHTML="256th Note Granularity"
+						granularityLabel.innerHTML="256th Note Resolution"
 						break						
 				}
 				currentMidi=analyze(currentMidi,{granularity:2**e.target.value})

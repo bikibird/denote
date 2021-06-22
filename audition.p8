@@ -8,6 +8,7 @@ function _init()
 	screenaddress=0x6000
 	musicindex=0
 	sfxindex=0
+	colors={0,8,2,3}
 	cls(0)
 	color(7)
 	msg=""
@@ -72,30 +73,26 @@ function _update()
 		msg="\^w\^t txf complete"
 		return
 	end
-	--if stat(24)==-1 then
-	--	cls(0)
-	--	_draw=message
-	--end
 	pitches={}
 	if stat(24)>-1 then
-		
-		for i = 0, 4 do
-			noteindex = stat(20 + i)
+		for i = 0, 3 do
 			sfxindex = stat(16 + i)
+			noteindex = stat(20 + i)
 			if sfxindex > -1 then
-				if band(shr(peek(sfxaddress+sfxindex*68+noteindex*2+1),1),7) >0 then
-					add(pitches,band(peek(sfxaddress+sfxindex*68+noteindex*2),63)*2)
+				pitch=band(peek(sfxaddress+sfxindex*68+noteindex*2),63)
+				if band(shr(peek(sfxaddress+sfxindex*68+noteindex*2+1),1),7) >0 and pitch >-1 then
+					add(pitches,{x=pitch*2,c=colors[i+1]})
 				end
 			end	
 		end	
 	end
 end
 function visualize()
-		line(0,127,127,127,7)
-		for i=1,#pitches do
-			line(pitches[i],127,pitches[i]+1,127,i)
-		end
-		memcpy(screenaddress,screenaddress+128,8064)  --shift up one row.
+	line(0,127,127,127,7)
+	for i=1,#pitches do
+		line(pitches[i].x,127,pitches[i].x+1,127,pitches[i].c)
+	end
+	memcpy(screenaddress,screenaddress+128,8064)  --shift up one row.
 end
 function message()
 	if not(msg == "") then
