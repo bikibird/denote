@@ -54,7 +54,7 @@
 		e.onload = function(){
 
 			cartdata=_cartdat
-			console.log(cartdata)
+
 		}
 		e.type = "application/javascript";
 		e.src = "audition.js";

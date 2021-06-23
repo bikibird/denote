@@ -1,11 +1,11 @@
 function analyze(midi,options={granularity:16})
 {
-
 	const tracks=[]
 	var ppq=midi.header.ppq
 	var resolution=ppq*4/options.granularity
 	var tempos=midi.header.tempos
 	midi.result=null
+	
 	//Check for simultaneous notes and split into multiple tracks
 	midi.tracks.filter(track=>track.notes.length>0).forEach(track=>
 	{
@@ -16,6 +16,7 @@ function analyze(midi,options={granularity:16})
 		var lastNote
 		var rest
 		var nextTiming
+		
 		track.notes.forEach((note,index)=>
 		{
 			if (index>0)
@@ -86,9 +87,9 @@ function analyze(midi,options={granularity:16})
 					tempo.channels[channelIndex].push(
 					{
 						pitch:track[track.trackIndex].midi-36,
-						beats:Math.floor(track[track.trackIndex].durationTicks/resolution +.5),
 						volume:Math.floor(7*track[track.trackIndex].velocity+.5),
-						
+						ticks:track[track.trackIndex].ticks,
+						durationTicks:track[track.trackIndex].durationTicks
 					})
 				}	
 				track.trackIndex++
@@ -99,25 +100,22 @@ function analyze(midi,options={granularity:16})
 		})
 		tempo.channels=tempo.channels.filter(channel=>channel.length>0 && !isEmptyChannel(channel))		
 	})
-	
-
-
 	midi.result={sections:tempos}
 	return midi
-
 }
 
-function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:false})
+function convert(midi,options={granularity:16})
 {
+
 	const formatNote=(n)=>
 	{
 		var note=(0x10000+n).toString(16).substr(-4)
 		return note.substr(2,2)+note.substr(0,2)
 	}
 	const formatByte=(n)=>(0x100+n).toString(16).substr(-2)
-	//const tracks=[]
-	//var ppq=midi.header.ppq
-	//var resolution=ppq*4/options.granularity
+	
+	var ppq=midi.header.ppq
+	var resolution=ppq*4/options.granularity
 	var tempos=midi.result.sections
 	var pico8 =
 	{
@@ -128,7 +126,29 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 	midi.result.pico8Data={sfx:[],music:[]}
 	var sfxes=[]
 	var patterns=[]
-
+	
+	var startTick = function()
+	{
+		var start=Infinity
+		tempos.filter(tempo=>tempo.include).forEach(tempo=>
+		{	
+			tempo.channels.filter(track=>track.include).forEach(track=>
+			{
+				for (let index = 0; index < track.length; index++) 
+				{
+					if(track[index].volume>0 )
+					{
+						if (track[index].ticks<start)
+						{
+							start=track[index].ticks
+						}
+						break
+					}
+				}
+			})
+		})	
+		return start
+	}()
 	tempos.forEach((tempo,tempoIndex)=>
 	{
 		tempo.channels.forEach((channel,channelIndex)=>
@@ -136,43 +156,57 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 			var sfx=""
 			channel.forEach(note=>
 			{
-				
-				for (let i = 0; i< note.beats; i++)
+				if (note.ticks>=startTick)
 				{
-					if(note.volume>0)
+					var duration=note.durationTicks
+					var beats=Math.floor(note.durationTicks/resolution +.5)
+				}
+				else
+				{
+					var duration=note.durationTicks+note.ticks-startTick
+					if (duration>0)
 					{
-						//To do: if i === 0 attack else if i=== beats-1 decay and not stacatto otherwise if not stacato sustain if stacatto 0000
-
-						if (i===0)
+						var beats=Math.floor(note.durationTicks/resolution +.5)
+					}
+					
+				}	
+				if (duration>0)
+				{
+					for (let i = 0; i< beats; i++)
+					{
+						if(note.volume>0)
 						{
-							if (channel.attack===-1){sfx=sfx+"0000"}
-							else
+							if (i===0)
 							{
-								sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.attack+channel.instrument)
-							}	
-						}
-						else
-						{
-							if (i===note.beats-1)
-							{
-								if (channel.decay===-1){sfx=sfx+"0000"}
+								if (channel.attack===-1){sfx=sfx+"0000"}
 								else
 								{
-									sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.decay+channel.instrument)
-								}
-							}	
-							else
-							{
-								if (channel.sustain===-1){sfx=sfx+"0000"}
-								else
-								{
-									sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.sustain+channel.instrument)
+									sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.attack+channel.instrument)
 								}	
 							}
+							else
+							{
+								if (i===beats-1)
+								{
+									if (channel.decay===-1){sfx=sfx+"0000"}
+									else
+									{
+										sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.decay+channel.instrument)
+									}
+								}	
+								else
+								{
+									if (channel.sustain===-1){sfx=sfx+"0000"}
+									else
+									{
+										sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.sustain+channel.instrument)
+									}	
+								}
+							}
 						}
+						else{sfx=sfx+"0000"}	
 					}
-					else{sfx=sfx+"0000"}	
-				}	
+				}		
 				channel.sfx=sfx
 				channel.music=[]
 			})
@@ -192,11 +226,11 @@ function convert(midi,options={effect:"None",filter:0, stacatto:false, legato:fa
 					{
 						remainder=channel.sfx.length-i
 						step=(remainder>128)?128:remainder
-						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"0")+formatByte(channel.sfxFilter)+formatByte(tempo.speed)
+						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"01")+formatByte(channel.sfxFilter)+formatByte(tempo.speed)
 						if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
 						else {sfx=sfx+"0000"}
 
-						if (sfx.slice(2,130)==="".padEnd(128,"0")){channel.music.push(64)}//mute channel
+						if (sfx.slice(2,130)==="".padEnd(128,"01")&&channelIndex!==0){channel.music.push(64)}//mute channel
 						else
 						{
 							sfxIndex=sfxes.findIndex(s=>s.slice(2)===sfx.slice(2))
@@ -246,7 +280,7 @@ function isEmptyChannel(channel)
 	result=true
 	for (note of channel)
 	{
-		if (note.pitch > 0 && note.volume > 0 && note.beats > 0)
+		if (note.pitch > 0 && note.volume > 0 && note.durationTicks > 0)
 		{
 			result = false
 			break
@@ -267,5 +301,3 @@ function countSilence(channel)
 	}
 	return counter
 }
-
-

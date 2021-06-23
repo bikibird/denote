@@ -13,6 +13,8 @@ function _init()
 	color(7)
 	msg=""
 	_draw=message
+	playing=false
+	countdown=0
 	pitches={}
 end
 
@@ -43,6 +45,8 @@ function _update()
 	end	
 	if peek(gpioaddress)==4 then  --request play
 		music(0)
+		countdown=64
+		playing=true
 		cls(7)
 		_draw=visualize
 		poke(gpioaddress,5)  --acknowledge play
@@ -84,7 +88,21 @@ function _update()
 					add(pitches,{x=pitch*2,c=colors[i+1]})
 				end
 			end	
-		end	
+		end
+	else
+		if playing then
+			if countdown > 0 then
+				countdown-=1
+			else	
+				playing=false
+				msg="\^w\^t pause"
+				music(-1)
+				cls(0)
+				_draw=message
+				poke(gpioaddress,7)  --acknowledge pause
+				return
+			end
+		end		
 	end
 end
 function visualize()

@@ -8,10 +8,9 @@
 <link rel="stylesheet" href="denote.css">
 </head>
 <body>
-	
+	<h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1>
 	<div class="container">
-		<div class="row"><div class="col-md-auto"><h1 class="text-center display-4">Denote: MIDI Demake Tool for PICO-8</h1></div></div>
-		<div class="row">
+		<div class="row justify-content-center">
 			<div class="col-md-auto">
 				<div class="row">
 					<div>
@@ -27,8 +26,6 @@
 				<div class="row">
 					<label for="granularity" id="granularityLabel">Resolution: 16th Note</label>
 				</div>
-			</div>
-			<div class="col-md">
 				<div class="row"> 
 					<div class="col-md-auto">
 						<div class="denote-player">
@@ -37,14 +34,19 @@
 						</div>
 						<button class="btn btn-info" id="denote-play" type="button" disabled>Play</button>
 						<button class="btn btn-info" id="denote-copy" type="button" disabled>Copy SFX</button>
-						<span id="denote-sfx" class="d-none"></span>
-						<span class="text-info d-none" id="copied"><em> Copied!</em></span>
+					</div>
+				</div>
+				<div class="row"> 
+					<div class="col-md">
+						<div id="denote-sfx" class="d-none"></div>
+						<div class="text-info d-none text-right" id="copied"><em> Copied!</em></div>
 					</div>
 				</div>
 			</div>
 			<div class="col-md-auto">
 				<div class="denote-container"></div>	
 			</div>
+			
 		</div>
 	</div>
 		
@@ -208,7 +210,7 @@
 		reader.onload = function (e)
 		{
 			const midi = new Midi(e.target.result)
-			currentMidi = convert(analyze(midi,{granularity:2**granularity.value}))
+			currentMidi = analyze(midi,{granularity:2**granularity.value})
 			render(currentMidi)
 			update()
 		}
@@ -221,9 +223,9 @@
 		document.querySelector(".denote-container").innerHTML=
 		`${sections.reduce((s, section,index) => s+
 `<div class="denote-section card">
-	<div class="card-header">
+	<div class="card-header text-info">
 		<input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
-			checked class="denote-section-include"> Section ${index+1} BPM:${Math.floor(section.bpm+.5)}  
+			checked class="denote-section-include"> <strong>Section ${index+1}</strong> BPM:${Math.floor(section.bpm+.5)}  
 	</div>
 	<div card-body">
 		<ul class="list-group list-group-flush">
@@ -233,7 +235,7 @@
 				<div class="row">
 					<div class="col-md-auto">
 						<input type="checkbox" id="include-track${trackIndex+1}" name="include track ${trackIndex+1}"
-         checked class="denote-track-include"> track ${trackIndex+1} ${track.instrument} 
+         checked class="denote-track-include"><span class="text-info"> <strong>Track ${trackIndex+1}</strong> (${track.instrument})</span>
 					</div>
 					<div class="col-md-auto">
 						<div class="input-group input-group-sm mb-3">
@@ -260,59 +262,57 @@
 							</select>
 						</div>	
 					</div>	
-					<div class="col-md-auto">	
-						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="noise" value="2">Noise
-							</label>
-							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="noise" checked value="0">Off
-							</label>
-						</div>
-					</div>	
+
 				</div>	
 				<div class="denote-filter row">
 					<div class="col-md-auto">
-						
 						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="buzz" value="4">Buzz
-							</label>
 							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="buzz" checked value="0">Off
+								<input type="radio" name="noise${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="noise${index+1}-${trackIndex+1}" value="2">Noise
 							</label>
 						</div>
 						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="detune" value="8">Detune
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="detune" value="16">More
-							</label>
 							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="detune" checked value="0">Off
+								<input type="radio" name="buzz${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="buzz${index+1}-${trackIndex+1}" value="4">Buzz
 							</label>
 						</div>
 						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="reverb" value="24">Reverb
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="reverb" value="48">More
-							</label>
 							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="reverb" checked value="0">Off
+								<input type="radio" name="detune${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="detune${index+1}-${trackIndex+1}" value="8">Detune
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="detune${index+1}-${trackIndex+1}" value="16">More
 							</label>
 						</div>
 						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="dampen" value="72">Dampen
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="dampen" value="144">More
-							</label>
 							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="dampen" checked value="0">Off
+								<input type="radio" name="reverb${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="reverb${index+1}-${trackIndex+1}" value="24">Reverb
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="reverb${index+1}-${trackIndex+1}" value="48">More
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="dampen${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="dampen${index+1}-${trackIndex+1}" value="72">Dampen
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="dampen${index+1}-${trackIndex+1}" value="144">More
 							</label>
 						</div>
 					</div>	
@@ -429,34 +429,30 @@
 	}
 	update=function()
 	{
-		var sections=[]
-		var section
-		var filter
 		document.querySelectorAll(".denote-section").forEach((element,sectionIndex)=>
 		{
 			currentMidi.result.sections[sectionIndex].include=element.querySelector(".denote-section-include").checked
-			section=sections.push({section:element.querySelector(".denote-section-include").checked, tracks:[]})-1
-			element.querySelectorAll(".denote-track-include").forEach((track,trackIndex)=>
+			element.querySelectorAll(" .denote-track-include").forEach((track,trackIndex)=>
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].include=track.checked
 			})
-			element.querySelectorAll(".denote-instrument").forEach((instrument,trackIndex)=>
+			element.querySelectorAll(" .denote-instrument").forEach((instrument,trackIndex)=>
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].instrument=parseInt(instrument.value)
 			})
-			element.querySelectorAll(".denote-attack").forEach((attack,trackIndex)=>
+			element.querySelectorAll(" .denote-attack").forEach((attack,trackIndex)=>
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].attack=parseInt(attack.value)
 			})
-			element.querySelectorAll(".denote-sustain").forEach((sustain,trackIndex)=>
+			element.querySelectorAll(" .denote-sustain").forEach((sustain,trackIndex)=>
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].sustain=parseInt(sustain.value)
 			})
-			element.querySelectorAll(".denote-decay").forEach((decay,trackIndex)=>
+			element.querySelectorAll(" .denote-decay").forEach((decay,trackIndex)=>
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].decay=parseInt(decay.value)
 			})
-			element.querySelectorAll(".denote-filter").forEach((filter,trackIndex)=>
+			element.querySelectorAll(" .denote-filter").forEach((filter,trackIndex)=>
 			{
 				result=0
 				filter.querySelectorAll(" input").forEach(input=>result+=input.checked?parseInt(input.value):0)
@@ -464,7 +460,7 @@
 			})
 		})
 		
-		currentMidi=convert(currentMidi,{effect:"None",filter:0, stacatto:false, legato:false, sections:sections})
+		currentMidi=convert(currentMidi)
 		document.querySelector("#denote-sfx").innerHTML=currentMidi.result.sfx
 		pico8_gpio[0]=8 //Reset PICO 8 counters etc
 	}
