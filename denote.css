@@ -34,6 +34,7 @@ canvas
     height: 128px;
     margin: 0 auto;
     margin-top: 17px;
+	margin-bottom:15px;
     position: relative;
     background-color: #17a3b840;
     border-radius: 0 6px 6px 6px;
@@ -60,22 +61,16 @@ canvas
 	padding:10%
 }
 
-#granularity
-{
-	width:192px;
-	margin-top:.5em;
-}
-#granularityLabel
-{
-	width:192px;
-	text-align: center;
-}
+
 .btn-group
 {
-	margin-left: 0;
+	margin-left: 0px;
+	padding-left:0px;
+	margin-right: 0px;
 	margin-bottom: 15px;
 }
 .denote-section
 {
 	margin-bottom:15px;
 }
+

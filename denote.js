@@ -1,8 +1,6 @@
-function analyze(midi,options={granularity:16})
+function analyze(midi)
 {
 	const tracks=[]
-	var ppq=midi.header.ppq
-	var resolution=ppq*4/options.granularity
 	var tempos=midi.header.tempos
 	midi.result=null
 	
@@ -73,8 +71,7 @@ function analyze(midi,options={granularity:16})
 		tempo.channels=[[]]
 		var channelIndex=0
 		
-		speed=Math.floor((7200/ppq)*resolution/tempo.bpm +.5)
-		tempo.speed=speed
+		
 		tracks.forEach(track=>
 		{
 			tempo.channels[channelIndex].instrument=track.instrument	
@@ -104,7 +101,7 @@ function analyze(midi,options={granularity:16})
 	return midi
 }
 
-function convert(midi,options={granularity:16})
+function convert(midi)
 {
 
 	const formatNote=(n)=>
@@ -115,8 +112,7 @@ function convert(midi,options={granularity:16})
 	const formatByte=(n)=>(0x100+n).toString(16).substr(-2)
 	
 	var ppq=midi.header.ppq
-	var resolution=ppq*4/options.granularity
-	var tempos=midi.result.sections
+		var tempos=midi.result.sections
 	var pico8 =
 	{
 		effects:{"None":0, "Slide":4096, "Vibrato":8192, "Drop":12388, "Fade In":16384, "Fade Out":20480, "Fast Arpeggio":24576, "Slow Arpeggio":28762},
@@ -151,8 +147,10 @@ function convert(midi,options={granularity:16})
 	}()
 	tempos.forEach((tempo,tempoIndex)=>
 	{
+		var resolution=ppq*4/tempo.granularity
 		tempo.channels.forEach((channel,channelIndex)=>
 		{
+			
 			var sfx=""
 			channel.forEach(note=>
 			{
@@ -188,10 +186,10 @@ function convert(midi,options={granularity:16})
 							{
 								if (i===beats-1)
 								{
-									if (channel.decay===-1){sfx=sfx+"0000"}
+									if (channel.release===-1){sfx=sfx+"0000"}
 									else
 									{
-										sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.decay+channel.instrument)
+										sfx=sfx+formatNote(note.pitch +pico8.volumes[note.volume]+channel.release+channel.instrument)
 									}
 								}	
 								else
@@ -221,12 +219,14 @@ function convert(midi,options={granularity:16})
 			{
 				if (channel.include)
 				{
+					
+					var speed=Math.floor((7200/ppq)*ppq*4/tempo.granularity/tempo.bpm +.5)
 					i=0
 					while(i<channel.sfx.length && sfxes.length < 65)
 					{
 						remainder=channel.sfx.length-i
 						step=(remainder>128)?128:remainder
-						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"01")+formatByte(channel.sfxFilter)+formatByte(tempo.speed)
+						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"01")+formatByte(channel.sfxFilter)+formatByte(speed)
 						if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
 						else {sfx=sfx+"0000"}
 

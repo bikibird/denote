@@ -12,7 +12,7 @@
 	<div class="container">
 		<div class="row justify-content-center">
 			<div class="col-md-auto">
-				<div class="row">
+				<div class="row justify-content-center">
 					<div>
 						<div id="FileDrop">
 							<div  id="Text">Drop MIDI file here or click to choose file.</div>
@@ -20,13 +20,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="row">
-					<input type="range"  class="form-control-range" id="granularity" min="2" max="8" value=4>
-				</div>
-				<div class="row">
-					<label for="granularity" id="granularityLabel">Resolution: 16th Note</label>
-				</div>
-				<div class="row"> 
+				<div class="row justify-content-center"> 
 					<div class="col-md-auto">
 						<div class="denote-player">
 							<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault();" >
@@ -46,7 +40,6 @@
 			<div class="col-md-auto">
 				<div class="denote-container"></div>	
 			</div>
-			
 		</div>
 	</div>
 		
@@ -210,7 +203,7 @@
 		reader.onload = function (e)
 		{
 			const midi = new Midi(e.target.result)
-			currentMidi = analyze(midi,{granularity:2**granularity.value})
+			currentMidi = analyze(midi)//,{granularity:2**parseInt(granularity.value)})
 			render(currentMidi)
 			update()
 		}
@@ -224,8 +217,18 @@
 		`${sections.reduce((s, section,index) => s+
 `<div class="denote-section card">
 	<div class="card-header text-info">
-		<input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
-			checked class="denote-section-include"> <strong>Section ${index+1}</strong> BPM:${Math.floor(section.bpm+.5)}  
+		<div class="row justify-contents-full">
+			<div class="col-md-auto">
+				<input type="checkbox" id="include-section${index+1}" name="include section ${index+1}"
+				checked class="denote-section-include"> <strong>Section ${index+1}</strong> BPM:${Math.floor(section.bpm+.5)}
+			</div>
+			<div class="col-md-auto">
+				<label for="granularity" id="granularityLabel" class="text-info  denote-resolution">Resolution: 16th Note</label>
+			</div>	
+			<div class="col-md-auto">
+				<input type="range"  class="denote-resolution" id="granularity" min="2" max="8" value=4>
+			</div>
+		</div>
 	</div>
 	<div card-body">
 		<ul class="list-group list-group-flush">
@@ -261,63 +264,11 @@
 								<option value="33216">Custom 7</option>
 							</select>
 						</div>	
-					</div>	
-
+					</div>
 				</div>	
-				<div class="denote-filter row">
-					<div class="col-md-auto">
-						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="noise${index+1}-${trackIndex+1}" checked value="0">X
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="noise${index+1}-${trackIndex+1}" value="2">Noise
-							</label>
-						</div>
-						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="buzz${index+1}-${trackIndex+1}" checked value="0">X
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="buzz${index+1}-${trackIndex+1}" value="4">Buzz
-							</label>
-						</div>
-						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="detune${index+1}-${trackIndex+1}" checked value="0">X
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="detune${index+1}-${trackIndex+1}" value="8">Detune
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="detune${index+1}-${trackIndex+1}" value="16">More
-							</label>
-						</div>
-						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="reverb${index+1}-${trackIndex+1}" checked value="0">X
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="reverb${index+1}-${trackIndex+1}" value="24">Reverb
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="reverb${index+1}-${trackIndex+1}" value="48">More
-							</label>
-						</div>
-						<div class="btn-group btn-group-toggle col-md-auto" data-toggle="buttons">
-							<label class="btn btn-sm btn-outline-info active">
-								<input type="radio" name="dampen${index+1}-${trackIndex+1}" checked value="0">X
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="dampen${index+1}-${trackIndex+1}" value="72">Dampen
-							</label>
-							<label class="btn btn-sm btn-outline-info">
-								<input type="radio" name="dampen${index+1}-${trackIndex+1}" value="144">More
-							</label>
-						</div>
-					</div>	
-				</div>	
+				
 				<div class="row">
+					
 					<div class="col-md-auto">
 						<div class="input-group input-group-sm mb-3">
   							<div class="input-group-prepend">
@@ -357,9 +308,9 @@
 					<div class="col-md-auto">
 						<div class="input-group input-group-sm mb-3">
   							<div class="input-group-prepend">
-    							<label class="input-group-text input-group-text-sm" for="decay">Decay</label>
+    							<label class="input-group-text input-group-text-sm" for="release">Release</label>
   							</div>
-							<select name="decay" class="denote-decay form-select custom-select" id="decay">
+							<select name="release" class="denote-release form-select custom-select" id="release">
 								<option value="0">Steady</option>
 								<option value="4096">Slide</option>
 								<option value="8192">Vibrato</option>
@@ -373,6 +324,59 @@
 						</div>	
 					</div>
 				</div>
+				<div class="denote-filter row justify-content-center">
+					<div class="col-md-auto">
+						<div class="btn-group btn-group-toggle " data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="noise${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="noise${index+1}-${trackIndex+1}" value="2">Noise
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle " data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="buzz${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="buzz${index+1}-${trackIndex+1}" value="4">Buzz
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle " data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="detune${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="detune${index+1}-${trackIndex+1}" value="8">Detune
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="detune${index+1}-${trackIndex+1}" value="16">More
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle " data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="reverb${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="reverb${index+1}-${trackIndex+1}" value="24">Reverb
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="reverb${index+1}-${trackIndex+1}" value="48">More
+							</label>
+						</div>
+						<div class="btn-group btn-group-toggle" data-toggle="buttons">
+							<label class="btn btn-sm btn-outline-info active">
+								<input type="radio" name="dampen${index+1}-${trackIndex+1}" checked value="0">X
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="dampen${index+1}-${trackIndex+1}" value="72">Dampen
+							</label>
+							<label class="btn btn-sm btn-outline-info">
+								<input type="radio" name="dampen${index+1}-${trackIndex+1}" value="144">More
+							</label>
+						</div>
+					</div>	
+				</div>	
 			</li>
 		</ul>`,"")}  
 	</div>
@@ -382,56 +386,43 @@
 	document.addEventListener('change', (e)=>onchange(e))
 	onchange=function(e)
 	{
-		if (e.target.matches(".denote-section-include,.denote-track-include,.denote-instrument,.denote-attack,.denote-sustain,.denote-decay,input[type='radio']"))
+		if (e.target.matches(".denote-section-include,.denote-track-include,.denote-instrument,input.denote-resolution,.denote-attack,.denote-sustain,.denote-release,input[type='radio']"))
 		{
 			update()
 		}
-		else
-		{
-			if (e.target.matches("#granularity"))
-			{
-				
-				switch(e.target.value) 
-				{
-					case "2":
-						granularityLabel.innerHTML="Quarter Note Resolution"
-						break
-					case "3":
-						granularityLabel.innerHTML="Eighth Note Resolution"
-						break
-					case "4":
-						granularityLabel.innerHTML="Sixteenth Note Resolution"
-						break
-					case "5":
-						granularityLabel.innerHTML="32nd Note Resolution"
-						break
-					case "6":
-						granularityLabel.innerHTML="64th Note Resolution"
-						break
-					case "7":
-						granularityLabel.innerHTML="128th Note Resolution"
-						break
-					case "8":
-						granularityLabel.innerHTML="256th Note Resolution"
-						break						
-				}
-				currentMidi=analyze(currentMidi,{granularity:2**e.target.value})
-				update()
-			}
-			else
-			{
-				if(e.target.matches(".denote-instrument"))
-				{
-					update()
-				}
-			}
-		}
+		
 	}
 	update=function()
 	{
 		document.querySelectorAll(".denote-section").forEach((element,sectionIndex)=>
 		{
 			currentMidi.result.sections[sectionIndex].include=element.querySelector(".denote-section-include").checked
+			var granularity=element.querySelector(" input.denote-resolution").value
+			currentMidi.result.sections[sectionIndex].granularity=parseInt(2**parseInt(granularity))
+			switch(granularity) 
+			{
+				case "2":
+					element.querySelector(" label.denote-resolution").innerHTML="Quarter Note Resolution"
+					break
+				case "3":
+					element.querySelector(" label.denote-resolution").innerHTML="Eighth Note Resolution"
+					break
+				case "4":
+					element.querySelector(" label.denote-resolution").innerHTML="16th Note Resolution"
+					break
+				case "5":
+					element.querySelector(" label.denote-resolution").innerHTML="32nd Note Resolution"
+					break
+				case "6":
+					element.querySelector(" label.denote-resolution").innerHTML="64th Note Resolution"
+					break
+				case "7":
+					element.querySelector(" label.denote-resolution").innerHTML="128th Note Resolution"
+					break
+				case "8":
+					element.querySelector(" label.denote-resolution").innerHTML="256th Note Resolution"
+					break						
+			}
 			element.querySelectorAll(" .denote-track-include").forEach((track,trackIndex)=>
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].include=track.checked
@@ -448,9 +439,9 @@
 			{
 				currentMidi.result.sections[sectionIndex].channels[trackIndex].sustain=parseInt(sustain.value)
 			})
-			element.querySelectorAll(" .denote-decay").forEach((decay,trackIndex)=>
+			element.querySelectorAll(" .denote-release").forEach((release,trackIndex)=>
 			{
-				currentMidi.result.sections[sectionIndex].channels[trackIndex].decay=parseInt(decay.value)
+				currentMidi.result.sections[sectionIndex].channels[trackIndex].release=parseInt(release.value)
 			})
 			element.querySelectorAll(" .denote-filter").forEach((filter,trackIndex)=>
 			{
@@ -460,7 +451,7 @@
 			})
 		})
 		
-		currentMidi=convert(currentMidi)
+		currentMidi=convert(currentMidi)//convert(currentMidi,{granularity:2**parseInt(granularity.value)})
 		document.querySelector("#denote-sfx").innerHTML=currentMidi.result.sfx
 		pico8_gpio[0]=8 //Reset PICO 8 counters etc
 	}
