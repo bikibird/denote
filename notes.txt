@@ -1,25 +1,4 @@
-
-Poking memory from Javascript: https://www.lexaloffle.com/bbs/?tid=3339
 Triggering GPIO pins https://www.lexaloffle.com/bbs/?tid=3909
-
-Javascript side:
-
-Poke SFX/Music into memory.  Poke cart data with a flag.
-
-PICO Cartridge side:
-
-	Init function: set cart data flag to zero.
-
-	Update function: 
-		Read cart data flag. 
-		If flag greater than zero, play music.
-		After music done playing, set flag to zero.
-
-Javascript:
-	On click, restart cart.
-	Write sfx/music data to memory.
-	Set  cart data flag to one.
-	
 
 Javascript side
 
