@@ -145,10 +145,10 @@ function convert(midi)
 		})	
 		return start
 	}()
-	tempos.forEach((tempo,tempoIndex)=>
+	tempos.forEach(tempo=>
 	{
 		var resolution=ppq*4/tempo.granularity
-		tempo.channels.forEach((channel,channelIndex)=>
+		tempo.channels.forEach(channel=>  //create list of formatted notes for each channel.  
 		{
 			
 			var sfx=""
@@ -205,13 +205,13 @@ function convert(midi)
 						else{sfx=sfx+"0000"}	
 					}
 				}		
-				channel.sfx=sfx
+				channel.sfx=sfx  
 				channel.music=[]
 			})
 		})
 	})	
 	let i,step,sfx,remainder,sfxIndex
-	tempos.forEach((tempo,tempoIndex)=>
+	tempos.forEach(tempo=>
 	{
 		if (tempo.include)
 		{
@@ -219,18 +219,19 @@ function convert(midi)
 			{
 				if (channel.include)
 				{
-					
+					//Chop list of formatted notes into proper sfxes. 
 					var speed=Math.floor((7200/ppq)*ppq*4/tempo.granularity/tempo.bpm +.5)
 					i=0
 					while(i<channel.sfx.length && sfxes.length < 65)
 					{
 						remainder=channel.sfx.length-i
 						step=(remainder>128)?128:remainder
+						//creat the next sfx.
 						sfx=formatByte(sfxes.length)+channel.sfx.slice(i,i+step).padEnd(128,"01")+formatByte(channel.sfxFilter)+formatByte(speed)
 						if (step < 128){sfx=sfx+formatByte(step/4)+"00"}
 						else {sfx=sfx+"0000"}
 
-						if (sfx.slice(2,130)==="".padEnd(128,"01")&&channelIndex!==0){channel.music.push(64)}//mute channel
+						if ((sfx.slice(2,130)==="".padEnd(128,"01")||sfx.slice(2,130)==="".padEnd(128,"00"))&&channelIndex!==0){channel.music.push(64)}//mute channel
 						else
 						{
 							sfxIndex=sfxes.findIndex(s=>s.slice(2)===sfx.slice(2))
@@ -287,17 +288,4 @@ function isEmptyChannel(channel)
 		}
 	}
 	return result
-}
-function countSilence(channel)
-{
-	var counter=0
-	for (note of channel)
-	{
-		if (note.volume === 0)
-		{
-			counter++
-		}
-		else {break}
-	}
-	return counter
 }
